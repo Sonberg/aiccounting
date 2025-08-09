@@ -19,7 +19,8 @@
     "dayjs": "^1.11.13",
     "encore.dev": "^1.48.12",
     "jsonwebtoken": "^9.0.2",
-    "zod": "^4.0.14"
+    "openai": "^5.12.2",
+    "zod": "^3.25.76"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.13.0"

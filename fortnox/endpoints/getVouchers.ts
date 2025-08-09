@@ -9,7 +9,7 @@ interface FortnoxVoucher {
   ApprovalState: number;
   Comments: string | null;
   Description: string | null;
-  ReferenceNumber: string;
+  ReferenceNumber: string | null;
   ReferenceType:
     | 'INVOICE'
     | 'SUPPLIERINVOICE'
@@ -17,7 +17,9 @@ interface FortnoxVoucher {
     | 'SUPPLIERPAYMENT'
     | 'MANUAL'
     | 'CASHINVOICE'
-    | 'ACCRUAL';
+    | 'ACCRUAL'
+    | string
+    | null;
   TransactionDate: string;
   VoucherNumber: number;
   VoucherSeries: string;
@@ -59,7 +61,7 @@ export const getVouchers = api<Params, Response>(
     let totalPages = 1;
 
     do {
-      const { data } = await fortnox.get<FortnoxVoucherResponse>(
+      const { data, request } = await fortnox.get<FortnoxVoucherResponse>(
         `/3/vouchers`,
         {
           params: {
@@ -67,10 +69,14 @@ export const getVouchers = api<Params, Response>(
             todate: to ? dayjs(to).format('YYYY-MM-DD') : undefined,
             voucherseries: voucherSeries,
             page: currentPage,
-            sort: 'vouchernumber',
+            sortby: 'vouchernumber',
+            sortorder: 'descending',
           },
+          validateStatus: () => true,
         }
       );
+
+      log(data, request);
 
       vouchers.push(...data.Vouchers);
 

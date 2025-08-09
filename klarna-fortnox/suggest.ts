@@ -1,9 +1,8 @@
-import { log } from 'console';
 import { api } from 'encore.dev/api';
-import { fortnox, klarna } from '~encore/clients';
+import { core, fortnox, klarna } from '~encore/clients';
 
 interface Params {
-  klarnaReference: string;
+  paymentReference: string;
 }
 
 const voucherSeries = 'O';
@@ -14,22 +13,33 @@ export const suggest = api<Params>(
     path: '/klarna-fortnox/suggest',
     expose: true,
   },
-  async ({ klarnaReference }) => {
+  async ({ paymentReference }) => {
     const payout = await klarna.getPayout({
-      paymentReference: klarnaReference,
+      paymentReference,
     });
 
     const transactions = await klarna.getPayoutTransactions({
-      paymentReference: klarnaReference,
+      paymentReference,
     });
 
     const simularVouchers = await fortnox.getVouchers({
-      voucherSeries: voucherSeries,
+      voucherSeries,
     });
 
-    const leftToFetch = 500 - simularVouchers.data.length;
+    const leftToFetch = 0 - simularVouchers.data.length;
     const referenceVouchers = await fortnox.getVouchers({
-      limit: leftToFetch,
+      limit: Math.max(leftToFetch, 0),
+    });
+
+    const result = await core.suggest({
+      tenantId: 1,
+      referenceSource: 'Fortnox',
+      references: [...simularVouchers.data, ...referenceVouchers.data],
+      transactionSource: 'Klarna settlement',
+      transaction: {
+        payout: payout,
+        transactions: transactions,
+      },
     });
 
     const prompt = `
