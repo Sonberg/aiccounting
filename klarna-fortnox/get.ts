@@ -18,13 +18,14 @@ export const get = api<Params, Response>(
     expose: true,
   },
   async ({ from }) => {
-    var payouts = await klarna.getPayouts({
+    const payouts = await klarna.getPayouts({
       from,
     });
 
-    var vouchers = await fortnox.getVouchers({
+    const vouchers = await fortnox.getVouchers({
       from,
       to: dayjs().format('YYYY-MM-DD'),
+      voucherSeries: 'O',
     });
 
     const status = await core.status({

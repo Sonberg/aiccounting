@@ -1,9 +1,7 @@
 import { api } from 'encore.dev/api';
 import { getToken } from '../database';
 import { getFortnoxClient } from '../client';
-import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { log } from 'console';
 
 interface FortnoxVoucher {
   ApprovalState: number;
@@ -23,7 +21,20 @@ interface FortnoxVoucher {
   TransactionDate: string;
   VoucherNumber: number;
   VoucherSeries: string;
+  VoucherRows?: FortnoxVoucherRow[];
   Year: number;
+}
+
+interface FortnoxVoucherRow {
+  Account: number;
+  CostCenter: string | null;
+  Credit: number;
+  Debit: number;
+  Description: string | null;
+  Project: string | null;
+  Quantity: number;
+  Removed: boolean;
+  TransactionInformation: string | null;
 }
 
 interface FortnoxVoucherResponse {
@@ -40,6 +51,7 @@ interface Params {
   to?: string;
   voucherSeries?: string;
   limit?: number;
+  includeRows?: boolean;
 }
 
 interface Response {
@@ -52,7 +64,7 @@ export const getVouchers = api<Params, Response>(
     method: 'GET',
     expose: false,
   },
-  async ({ from, to, voucherSeries, limit }) => {
+  async ({ from, to, voucherSeries, limit, includeRows }) => {
     const token = await getToken(1);
     const fortnox = getFortnoxClient(token);
 
@@ -61,7 +73,7 @@ export const getVouchers = api<Params, Response>(
     let totalPages = 1;
 
     do {
-      const { data, request } = await fortnox.get<FortnoxVoucherResponse>(
+      const { data } = await fortnox.get<FortnoxVoucherResponse>(
         `/3/vouchers`,
         {
           params: {
@@ -72,13 +84,18 @@ export const getVouchers = api<Params, Response>(
             sortby: 'vouchernumber',
             sortorder: 'descending',
           },
-          validateStatus: () => true,
         }
       );
+      for (const voucher of data.Vouchers) {
+        if (includeRows) {
+          voucher.VoucherRows = await getRows(
+            voucher.VoucherSeries,
+            voucher.VoucherNumber
+          );
+        }
 
-      log(data, request);
-
-      vouchers.push(...data.Vouchers);
+        vouchers.push(voucher);
+      }
 
       totalPages = data.MetaInformation['@TotalPages'];
       currentPage++;
@@ -90,5 +107,13 @@ export const getVouchers = api<Params, Response>(
     } while (currentPage <= totalPages);
 
     return { data: vouchers };
+
+    async function getRows(voucherSeries: string, voucherNumber: number) {
+      const { data } = await fortnox.get<{ Voucher: FortnoxVoucher }>(
+        `/3/vouchers/${voucherSeries}/${voucherNumber}`
+      );
+
+      return data.Voucher.VoucherRows ?? [];
+    }
   }
 );

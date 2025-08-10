@@ -11,7 +11,7 @@ export async function summarizeIfLarge(
 ) {
   const jsonStr = JSON.stringify(data);
   // Enkel "storlekstest" - här kan du även räkna tokens med en tokeniserare
-  if (jsonStr.length < maxTokens) {
+  if (jsonStr.length) {
     return jsonStr;
   }
 
