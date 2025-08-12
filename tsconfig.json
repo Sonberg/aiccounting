@@ -17,6 +17,8 @@
     /* Strict Type-Checking Options */
     "strict": true,
 
+    "jsx": "preserve",
+
     /* Module Resolution Options */
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,

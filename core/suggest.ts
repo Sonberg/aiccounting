@@ -4,42 +4,71 @@ import { log } from 'console';
 
 interface Params {
   tenantId: number;
-  references: unknown[];
-  referenceSource: string;
+  fileNames: string[];
   transactionSource: string;
   transaction: unknown;
 }
 
+export interface TransactionSuggestion {
+  voucherseries: string;
+  date: string;
+  rows: TransactionSuggestionRow[];
+}
+
+export interface TransactionSuggestionRow {
+  account: string | number;
+  debit: number;
+  credit: number;
+  description: string;
+}
+
 interface Response {
-  data: string;
+  data: TransactionSuggestion;
 }
 
 export const suggest = api<Params, Response>(
   { method: 'POST', path: '/core/suggest' },
   async (params) => {
     const prompt = `
-      Here are previous bookkeeping entries from ${params.referenceSource}:
-      ${JSON.stringify(params.references, null, 2)}
-
-      Now, here is a new ${params.transactionSource} row:
+      Here is a new ${params.transactionSource} transaction:
       ${JSON.stringify(params.transaction, null, 2)}
 
       Suggest a Fortnox voucher according to Swedish bookkeeping best practices and similar past vouchers.
-      Output JSON in the format:
+      Reply in JSON:
       {
         "date": "...",
-        "entries": [
-          {"account": "...", "amount": ..., "description": "...", "vatCode": "..."}
+        "voucherseries": "Most sutable voucherseries for transaction from ${params.transactionSource}",
+        "rows": [
+          {
+          "account": "...",
+          "debit": ...,
+          "credit": ...,
+          "description": "..."
+          }
         ]
       }
-
-       Reply ONLY in JSON with no explanation.
       `;
 
+    const files = await client.files.list();
     const response = await client.responses.create({
       model: 'gpt-4.1-mini',
-      input: prompt,
-      temperature: 0,
+      input: [
+        {
+          role: 'user',
+          content: [
+            ...files.data
+              .filter((x) => params.fileNames.includes(x.filename))
+              .map((x) => ({
+                type: 'input_file' as const,
+                file_id: x.id,
+              })),
+            {
+              type: 'input_text',
+              text: prompt,
+            },
+          ],
+        },
+      ],
     });
 
     log(response.output_text);

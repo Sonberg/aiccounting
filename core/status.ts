@@ -1,29 +1,29 @@
 import { api } from 'encore.dev/api';
-import { client, summarizeIfLarge } from './open-ai';
+import { client } from './open-ai';
 import { log } from 'console';
 
-interface Params {
-  entries: unknown[];
-  entriesSource: string;
+interface CoreStatusParams {
+  fileNames: string[];
   transactionSource: string;
   transactions: unknown;
 }
 
-interface Response {
-  data: {
-    alreadyBooked: boolean;
-    voucherNumber: string | null;
-    paymentReference: string | null;
-    reason: string;
-  }[];
+interface CoreStatusResponse {
+  data: TransactionStatus[];
 }
 
-export const status = api<Params, Response>(
+export interface TransactionStatus {
+  alreadyBooked: boolean;
+  voucherNumber: string | null;
+  paymentReference: string | null;
+  reason: string;
+}
+
+export const status = api<CoreStatusParams, CoreStatusResponse>(
   { method: 'POST', path: '/core/status' },
   async (params) => {
     const prompt = `
-      Bookkeeping entries from ${params.entriesSource}:
-      ${JSON.stringify(params.entries, null, 2)}
+      Bookkeeping entries from Fortnox is included as files
 
       Now, list of transactions from ${params.transactionSource}:
       ${JSON.stringify(params.transactions, null, 2)}
@@ -41,13 +41,28 @@ export const status = api<Params, Response>(
         "reason": "short explanation"
       },...]
       `;
+
+    const files = await client.files.list();
     const response = await client.responses.create({
       model: 'gpt-4.1-mini',
-      input: prompt,
-      temperature: 0,
+      input: [
+        {
+          role: 'user',
+          content: [
+            ...files.data
+              .filter((x) => params.fileNames.includes(x.filename))
+              .map((x) => ({
+                type: 'input_file' as const,
+                file_id: x.id,
+              })),
+            {
+              type: 'input_text',
+              text: prompt,
+            },
+          ],
+        },
+      ],
     });
-
-    log(response.output_text);
 
     return { data: JSON.parse(response.output_text!) };
   }

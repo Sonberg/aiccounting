@@ -84,6 +84,28 @@ export interface ClientOptions {
     requestInit?: Omit<RequestInit, "headers"> & { headers?: Record<string, string> }
 }
 
+export namespace core {
+    export interface TransactionStatus {
+        alreadyBooked: boolean
+        voucherNumber: string | null
+        paymentReference: string | null
+        reason: string
+    }
+
+    export interface TransactionSuggestion {
+        voucherseries: string
+        date: string
+        rows: TransactionSuggestionRow[]
+    }
+
+    export interface TransactionSuggestionRow {
+        account: string
+        debit: number
+        credit: number
+        description: string
+    }
+}
+
 export namespace fortnox {
 
     export class ServiceClient {
@@ -143,16 +165,28 @@ export namespace klarna {
 }
 
 export namespace klarna_fortnox {
-    export interface Params {
+    export interface KlarnaFortnoxGetParams {
         from: string
     }
 
-    export interface Params {
+    export interface KlarnaFortnoxGetResponse {
+        data: endpoints.Payout[]
+    }
+
+    export interface KlarnaFortnoxStatusParams {
+        from: string
+    }
+
+    export interface KlarnaFortnoxStatusResponse {
+        data: core.TransactionStatus[]
+    }
+
+    export interface KlarnaFortnoxSuggestParams {
         paymentReference: string
     }
 
-    export interface Response {
-        data: any[]
+    export interface KlarnaFortnoxSuggestResponse {
+        data: core.TransactionSuggestion
     }
 
     export class ServiceClient {
@@ -161,17 +195,26 @@ export namespace klarna_fortnox {
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
             this.get = this.get.bind(this)
+            this.status = this.status.bind(this)
             this.suggest = this.suggest.bind(this)
         }
 
-        public async get(params: Params): Promise<Response> {
+        public async get(params: KlarnaFortnoxGetParams): Promise<KlarnaFortnoxGetResponse> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI("POST", `/klarna-fortnox`, JSON.stringify(params))
-            return await resp.json() as Response
+            return await resp.json() as KlarnaFortnoxGetResponse
         }
 
-        public async suggest(params: Params): Promise<void> {
-            await this.baseClient.callTypedAPI("POST", `/klarna-fortnox/suggest`, JSON.stringify(params))
+        public async status(params: KlarnaFortnoxStatusParams): Promise<KlarnaFortnoxStatusResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/klarna-fortnox/status`, JSON.stringify(params))
+            return await resp.json() as KlarnaFortnoxStatusResponse
+        }
+
+        public async suggest(params: KlarnaFortnoxSuggestParams): Promise<KlarnaFortnoxSuggestResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/klarna-fortnox/suggest`, JSON.stringify(params))
+            return await resp.json() as KlarnaFortnoxSuggestResponse
         }
     }
 }
@@ -209,7 +252,7 @@ export namespace endpoints {
 
     export interface Payout {
         "currency_code": string
-        "currency_code_of_registration_country": string | null
+        "currency_code_of_registration_country"?: string | null
         "merchant_id": string
         "merchant_settlement_type": string
         "payment_reference": string
@@ -241,7 +284,7 @@ export namespace endpoints {
 
     export interface PayoutTransaction {
         amount: number
-        "capture_date": string
+        "capture_date"?: string
         "customer_vat"?: {
             "tax_amount": number
             "tax_rate": number
@@ -249,15 +292,15 @@ export namespace endpoints {
         "currency_code": string
         "detailed_type": string
         "initial_payment_method_number_of_installments"?: number
-        "initial_payment_method_type": string
+        "initial_payment_method_type"?: string
         "merchant_id": string
-        "order_id": string
+        "order_id"?: string | null
         "payment_reference": string
         payout: string
-        "purchase_country": string
+        "purchase_country"?: string
         "refund_id"?: string
-        "sale_date": string
-        "short_order_id": string
+        "sale_date"?: string
+        "short_order_id"?: string
         type: string
         "vat_amount": number
     }

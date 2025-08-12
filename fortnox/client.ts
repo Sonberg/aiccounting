@@ -13,7 +13,7 @@ export const FortnoxAuthClient = axios.create({
   },
 });
 
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 10;
 const INITIAL_DELAY_MS = 1000;
 
 export const getFortnoxClient = (token: Token) => {

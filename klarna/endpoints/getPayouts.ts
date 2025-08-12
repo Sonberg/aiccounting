@@ -11,7 +11,7 @@ export interface Pagination {
 
 export interface Payout {
   currency_code: string;
-  currency_code_of_registration_country: string | null;
+  currency_code_of_registration_country?: string | null;
   merchant_id: string;
   merchant_settlement_type: string;
   payment_reference: string;
