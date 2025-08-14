@@ -62,7 +62,7 @@ export function TransactionCard({ payout, status }: TransactionCardProps) {
       <div className={classNames(['mt-6'])}>{status?.reason}</div>
 
       <div className="flex justify-end">
-        {status?.alreadyBooked == false && !suggestion ? (
+        {status?.alreadyBooked == false ? (
           <button
             className={classNames([
               'text-white font-bold px-4 py-2 rounded-full mt-6',
@@ -75,13 +75,13 @@ export function TransactionCard({ payout, status }: TransactionCardProps) {
             disabled={isPending}
             onClick={() => mutateAsync()}
           >
-            Suggest
+            {!isPending && suggestion ? 'Try again' : 'Suggest'}
           </button>
         ) : null}
       </div>
 
       {suggestion ? (
-        <TransactionSuggestionCard suggestion={suggestion} />
+        <TransactionSuggestionCard payout={payout} suggestion={suggestion} />
       ) : null}
     </div>
   );

@@ -99,9 +99,9 @@ export namespace core {
     }
 
     export interface TransactionSuggestionRow {
-        account: string
-        debit: number
-        credit: number
+        account: string | number
+        debit: number | null
+        credit: number | null
         description: string
     }
 }

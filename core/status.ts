@@ -31,7 +31,13 @@ export const status = api<CoreStatusParams, CoreStatusResponse>(
       Check if this settlement is already in the vouchers.
       A match can be:
       - Exact or fuzzy match of payment reference, OCR, or description.
-      - Same amount within ±1 SEK and date within ±2 days.
+      - Exact amount
+      - Exact date
+
+      Remember that for Klarna totals need to divide by 100 to get correct value. Examples
+      10000 = 100 sek
+      15000 = 150 sek
+      9950 = 99.50 sek
 
       Reply in JSON:
       [{

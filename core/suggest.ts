@@ -17,8 +17,8 @@ export interface TransactionSuggestion {
 
 export interface TransactionSuggestionRow {
   account: string | number;
-  debit: number;
-  credit: number;
+  debit: number | null;
+  credit: number | null;
   description: string;
 }
 
@@ -33,6 +33,11 @@ export const suggest = api<Params, Response>(
       Here is a new ${params.transactionSource} transaction:
       ${JSON.stringify(params.transaction, null, 2)}
 
+      Remember that for Klarna totals need to divide by 100 to get correct value. Examples
+      10000 = 100 sek
+      15000 = 150 sek
+      9950 = 99.50 sek
+
       Suggest a Fortnox voucher according to Swedish bookkeeping best practices and similar past vouchers.
       Reply in JSON:
       {
@@ -41,9 +46,9 @@ export const suggest = api<Params, Response>(
         "rows": [
           {
           "account": "...",
-          "debit": ...,
-          "credit": ...,
-          "description": "..."
+          "debit": number or null
+          "credit": number or null,
+          "description": "Account name, dont include reference"
           }
         ]
       }
