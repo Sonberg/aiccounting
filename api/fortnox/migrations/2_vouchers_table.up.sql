@@ -1,0 +1,26 @@
+CREATE TABLE
+    vouchers (
+        id BIGSERIAL PRIMARY KEY,
+        tenant_id BIGINT NOT NULL,
+        approval_state INT NOT NULL,
+        year INT NOT NULL,
+        voucher_number INT NOT NULL,
+        voucher_series TEXT NOT NULL,
+        transaction_date DATE NOT NULL,
+        description TEXT,
+        raw_json JSONB NOT NULL,
+        synced_at TIMESTAMPTZ DEFAULT now (),
+        UNIQUE (voucher_series, voucher_number)
+    );
+
+CREATE TABLE
+    voucher_rows (
+        id BIGSERIAL PRIMARY KEY,
+        voucher_id BIGINT NOT NULL REFERENCES vouchers (id) ON DELETE CASCADE,
+
+        account_number INT NOT NULL,
+        description TEXT,
+        debit NUMERIC(18, 2) DEFAULT 0,
+        credit NUMERIC(18, 2) DEFAULT 0,
+        raw_json JSONB NOT NULL
+    );

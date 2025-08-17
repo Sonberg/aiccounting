@@ -1,0 +1,11 @@
+{
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.associations": {
+    "*.toml": "toml"
+  },
+  "yaml.schemas": {
+    "https://www.artillery.io/schema.json": []
+  }
+}
