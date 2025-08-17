@@ -1,6 +1,6 @@
-import { Payout } from '@/klarna/endpoints/getPayouts';
 import { api } from 'encore.dev/api';
 import { klarna } from '~encore/clients';
+import { Payout } from '../klarna/types';
 
 interface KlarnaFortnoxGetParams {
   from: string;

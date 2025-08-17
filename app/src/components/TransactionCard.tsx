@@ -4,10 +4,10 @@ import dayjs from 'dayjs';
 import { useState } from 'react';
 import { TransactionSuggestionCard } from './TransactionSuggestionCard';
 import { apiClient } from '../app/layout';
-import { core, endpoints } from '../lib/client';
+import { core, klarna } from '../lib/client';
 
 interface TransactionCardProps {
-  payout: endpoints.Payout;
+  payout: klarna.Payout;
   status: core.TransactionStatus | undefined;
 }
 

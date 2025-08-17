@@ -1,6 +1,6 @@
 import { api } from 'encore.dev/api';
 import { KlarnaRestClient } from '@/klarna/client';
-import { Payout } from './getPayouts';
+import { Payout } from '../types';
 
 export interface GetPayoutRequest {
   paymentReference: string;

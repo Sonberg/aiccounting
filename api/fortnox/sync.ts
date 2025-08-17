@@ -1,10 +1,10 @@
 import { syncTenant } from '@/iam/topics';
 import { log } from 'console';
 import { Attribute, Subscription, Topic } from 'encore.dev/pubsub';
-import { FortnoxVoucher } from './endpoints/getVouchers';
 import { fortnox } from '~encore/clients';
 import { db, getToken } from './database';
 import { getFortnoxClient } from './client';
+import { FortnoxVoucher } from './types';
 
 export interface SyncVoucherParams {
   tenantId: Attribute<number>;

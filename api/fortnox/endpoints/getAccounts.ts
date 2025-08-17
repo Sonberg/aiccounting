@@ -1,35 +1,22 @@
 import { api } from 'encore.dev/api';
 import { getToken } from '../database';
 import { getFortnoxClient } from '../client';
+import { FortnoxAccount } from '../types';
 
-export interface FortnoxAccount {
-  Active: boolean;
-  BalanceBroughtForward: number;
-  CostCenter: string | null;
-  CostCenterSettings: 'ALLOWED' | 'MANDATORY' | 'NOTALLOWED';
-  Description: string;
-  Number: number;
-  Project: string;
-  ProjectSettings: 'ALLOWED' | 'MANDATORY' | 'NOTALLOWED';
-  SRU: number;
-  VATCode: string | null;
-  Year: number;
-}
-
-interface FortnoxAccountResponse {
+interface FortnoxResponse {
   Accounts: FortnoxAccount[];
 }
 
-export interface GetFortnoxAccountsParams {
+interface GetFortnoxAccountsRequest {
   tenantId: number;
 }
 
-export interface GetFortnoxAccountsResponse {
+interface GetFortnoxAccountsResponse {
   data: FortnoxAccount[];
 }
 
 export const getAccounts = api<
-  GetFortnoxAccountsParams,
+  GetFortnoxAccountsRequest,
   GetFortnoxAccountsResponse
 >(
   {
@@ -40,7 +27,7 @@ export const getAccounts = api<
     const token = await getToken(tenantId);
     const client = getFortnoxClient(token);
 
-    const { data } = await client.get<FortnoxAccountResponse>(`/3/accounts`);
+    const { data } = await client.get<FortnoxResponse>(`/3/accounts`);
 
     return {
       data: data.Accounts,

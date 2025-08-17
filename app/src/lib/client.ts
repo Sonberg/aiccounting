@@ -168,6 +168,37 @@ export namespace iam {
 }
 
 export namespace klarna {
+    export interface Payout {
+        "currency_code": string
+        "currency_code_of_registration_country"?: string | null
+        "merchant_id": string
+        "merchant_settlement_type": string
+        "payment_reference": string
+        "payout_date": string
+        transactions: string
+        totals: PayoutTotals
+    }
+
+    export interface PayoutTotals {
+        "charge_amount": number
+        "closing_debt_balance_amount": number
+        "commission_amount": number
+        "credit_amount": number
+        "deposit_amount": number
+        "fee_amount": number
+        "fee_correction_amount": number
+        "fee_refund_amount": number
+        "holdback_amount": number
+        "opening_debt_balance_amount": number
+        "release_amount": number
+        "repay_amount": number
+        "return_amount": number
+        "reversal_amount": number
+        "sale_amount": number
+        "settlement_amount": number
+        "tax_amount": number
+        "tax_refund_amount": number
+    }
 
     export class ServiceClient {
         private baseClient: BaseClient
@@ -178,10 +209,10 @@ export namespace klarna {
             this.getPayouts = this.getPayouts.bind(this)
         }
 
-        public async getPayout(paymentReference: string): Promise<endpoints.Payout> {
+        public async getPayout(paymentReference: string): Promise<Payout> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI("GET", `/klarna/payouts/${encodeURIComponent(paymentReference)}`)
-            return await resp.json() as endpoints.Payout
+            return await resp.json() as Payout
         }
 
         public async getPayouts(params: endpoints.GetPayoutsParams): Promise<endpoints.GetPayoutsResponse> {
@@ -203,7 +234,7 @@ export namespace klarna_fortnox {
     }
 
     export interface KlarnaFortnoxGetResponse {
-        data: endpoints.Payout[]
+        data: klarna.Payout[]
     }
 
     export interface KlarnaFortnoxStatusParams {
@@ -258,39 +289,7 @@ export namespace endpoints {
     }
 
     export interface GetPayoutsResponse {
-        data: Payout[]
-    }
-
-    export interface Payout {
-        "currency_code": string
-        "currency_code_of_registration_country"?: string | null
-        "merchant_id": string
-        "merchant_settlement_type": string
-        "payment_reference": string
-        "payout_date": string
-        transactions: string
-        totals: PayoutTotals
-    }
-
-    export interface PayoutTotals {
-        "charge_amount": number
-        "closing_debt_balance_amount": number
-        "commission_amount": number
-        "credit_amount": number
-        "deposit_amount": number
-        "fee_amount": number
-        "fee_correction_amount": number
-        "fee_refund_amount": number
-        "holdback_amount": number
-        "opening_debt_balance_amount": number
-        "release_amount": number
-        "repay_amount": number
-        "return_amount": number
-        "reversal_amount": number
-        "sale_amount": number
-        "settlement_amount": number
-        "tax_amount": number
-        "tax_refund_amount": number
+        data: klarna.Payout[]
     }
 
     export interface PollBankIdRequest {

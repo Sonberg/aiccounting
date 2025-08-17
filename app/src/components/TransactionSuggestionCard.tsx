@@ -1,10 +1,10 @@
 import { useState, ChangeEvent } from 'react';
-import { core, endpoints, klarna } from '../lib/client';
+import { core, klarna } from '../lib/client';
 
 type Field = 'debit' | 'credit' | 'account';
 
 export interface Props {
-  payout: endpoints.Payout;
+  payout: klarna.Payout;
   suggestion: core.TransactionSuggestion;
 }
 

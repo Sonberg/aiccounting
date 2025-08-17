@@ -21,10 +21,8 @@ export const callback = api.raw(
     const body = new FormData();
     const query = new URLSearchParams(req.url?.split('?')[1]);
 
-    // TODO: Get and save accessToken
-
     body.append('grant_type', 'authorization_code');
-    body.append('code', query.get('code'));
+    body.append('code', query.get('code')!);
     body.append('redirect_uri', getReturnUrl());
     body.append('grant_type', 'authorization_code');
 

@@ -1,43 +1,10 @@
+import dayjs from 'dayjs';
 import { api } from 'encore.dev/api';
 import { getToken } from '../database';
 import { getFortnoxClient } from '../client';
-import dayjs from 'dayjs';
+import { FortnoxVoucher } from '../types';
 
-export interface FortnoxVoucher {
-  ApprovalState: number;
-  Comments: string | null;
-  Description: string | null;
-  ReferenceNumber: string | null;
-  ReferenceType:
-    | 'INVOICE'
-    | 'SUPPLIERINVOICE'
-    | 'INVOICEPAYMENT'
-    | 'SUPPLIERPAYMENT'
-    | 'MANUAL'
-    | 'CASHINVOICE'
-    | 'ACCRUAL'
-    | string
-    | null;
-  TransactionDate: string;
-  VoucherNumber: number;
-  VoucherSeries: string;
-  VoucherRows?: FortnoxVoucherRow[];
-  Year: number;
-}
-
-interface FortnoxVoucherRow {
-  Account: number;
-  CostCenter: string | null;
-  Credit: number;
-  Debit: number;
-  Description: string | null;
-  Project: string | null;
-  Quantity: number;
-  Removed: boolean;
-  TransactionInformation: string | null;
-}
-
-interface FortnoxVoucherResponse {
+interface FortnoxResponse {
   MetaInformation: {
     '@CurrentPage': number;
     '@TotalPages': number;
@@ -46,25 +13,24 @@ interface FortnoxVoucherResponse {
   Vouchers: FortnoxVoucher[];
 }
 
-interface Params {
+interface GetVouchersRequest {
   from?: string;
   to?: string;
   voucherSeries?: string;
   limit?: number;
-  includeRows?: boolean;
 }
 
-interface Response {
+interface GetVouchersResponse {
   data: FortnoxVoucher[];
 }
 
-export const getVouchers = api<Params, Response>(
+export const getVouchers = api<GetVouchersRequest, GetVouchersResponse>(
   {
     path: '/fortnox/vouchers',
     method: 'GET',
     expose: false,
   },
-  async ({ from, to, voucherSeries, limit, includeRows }) => {
+  async ({ from, to, voucherSeries, limit }) => {
     const token = await getToken(1);
     const fortnox = getFortnoxClient(token);
 
@@ -73,29 +39,18 @@ export const getVouchers = api<Params, Response>(
     let totalPages = 1;
 
     do {
-      const { data } = await fortnox.get<FortnoxVoucherResponse>(
-        `/3/vouchers`,
-        {
-          params: {
-            fromdate: from ? dayjs(from).format('YYYY-MM-DD') : undefined,
-            todate: to ? dayjs(to).format('YYYY-MM-DD') : undefined,
-            voucherseries: voucherSeries,
-            page: currentPage,
-            sortby: 'vouchernumber',
-            sortorder: 'descending',
-          },
-        }
-      );
+      const { data } = await fortnox.get<FortnoxResponse>(`/3/vouchers`, {
+        params: {
+          fromdate: from ? dayjs(from).format('YYYY-MM-DD') : undefined,
+          todate: to ? dayjs(to).format('YYYY-MM-DD') : undefined,
+          voucherseries: voucherSeries,
+          page: currentPage,
+          sortby: 'vouchernumber',
+          sortorder: 'descending',
+        },
+      });
+
       for (const voucher of data.Vouchers) {
-        if (includeRows) {
-          await new Promise<void>((res, _) => setTimeout(() => res(), 500));
-
-          voucher.VoucherRows = await getRows(
-            voucher.VoucherSeries,
-            voucher.VoucherNumber
-          );
-        }
-
         vouchers.push(voucher);
       }
 
@@ -109,13 +64,5 @@ export const getVouchers = api<Params, Response>(
     } while (currentPage <= totalPages);
 
     return { data: vouchers };
-
-    async function getRows(voucherSeries: string, voucherNumber: number) {
-      const { data } = await fortnox.get<{ Voucher: FortnoxVoucher }>(
-        `/3/vouchers/${voucherSeries}/${voucherNumber}`
-      );
-
-      return data.Voucher.VoucherRows ?? [];
-    }
   }
 );
