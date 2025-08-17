@@ -131,6 +131,12 @@ export namespace fortnox {
 }
 
 export namespace iam {
+    export interface User {
+        id: string
+        email: string
+        "display_name": string
+        "created_at": string
+    }
 
     export class ServiceClient {
         private baseClient: BaseClient
@@ -141,6 +147,8 @@ export namespace iam {
             this.bankIdStatus = this.bankIdStatus.bind(this)
             this.connectFortnox = this.connectFortnox.bind(this)
             this.connectKlarna = this.connectKlarna.bind(this)
+            this.login = this.login.bind(this)
+            this.signup = this.signup.bind(this)
         }
 
         /**
@@ -163,6 +171,18 @@ export namespace iam {
 
         public async connectKlarna(id: string): Promise<void> {
             await this.baseClient.callTypedAPI("POST", `/tenants/${encodeURIComponent(id)}/klarna/connect`)
+        }
+
+        public async login(params: endpoints.LoginRequest): Promise<endpoints.LoginResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/auth/login`, JSON.stringify(params))
+            return await resp.json() as endpoints.LoginResponse
+        }
+
+        public async signup(params: endpoints.CreateUserRequest): Promise<User> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/auth/signup`, JSON.stringify(params))
+            return await resp.json() as User
         }
     }
 }
@@ -284,12 +304,28 @@ export namespace klarna_fortnox {
 }
 
 export namespace endpoints {
+    export interface CreateUserRequest {
+        email: string
+        displayName?: string
+        password: string
+    }
+
     export interface GetPayoutsParams {
         from: string
     }
 
     export interface GetPayoutsResponse {
         data: klarna.Payout[]
+    }
+
+    export interface LoginRequest {
+        email: string
+        password: string
+    }
+
+    export interface LoginResponse {
+        success: boolean
+        token?: string
     }
 
     export interface PollBankIdRequest {

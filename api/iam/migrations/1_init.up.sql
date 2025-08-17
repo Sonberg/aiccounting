@@ -1,4 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS citext;
 
 CREATE TABLE
     tenants (
@@ -10,7 +9,7 @@ CREATE TABLE
 CREATE TABLE
     users (
         id BIGSERIAL PRIMARY KEY,
-        email CITEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
         display_name TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()

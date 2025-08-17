@@ -11,6 +11,10 @@ export interface SyncVoucherParams {
   voucher: FortnoxVoucher;
 }
 
+type SyncedAt = {
+  synced_at: string;
+};
+
 export const syncVoucher = new Topic<SyncVoucherParams>('sync-voucher', {
   orderingAttribute: 'tenantId',
   deliveryGuarantee: 'exactly-once',
@@ -18,9 +22,13 @@ export const syncVoucher = new Topic<SyncVoucherParams>('sync-voucher', {
 
 export const _1 = new Subscription(syncTenant, 'fortnox-vouchers', {
   handler: async (params) => {
-    log('Sync Fortnox vouchers', params.tenantId);
+    const row = await db.queryRow<SyncedAt>`
+      SELECT MAX(synced_at) FROM vouchers WHERE tenant_id = ${params.tenantId}
+    `;
 
-    const vouchers = await fortnox.getVouchers({});
+    const vouchers = await fortnox.getVouchers({
+      from: row?.synced_at,
+    });
 
     for (const voucher of vouchers.data) {
       await syncVoucher.publish({
@@ -79,27 +87,6 @@ export const _3 = new Subscription(syncVoucher, 'progress', {
             raw_json = EXCLUDED.raw_json
         RETURNING id;
       `;
-
-      // Insert rows
-      //   for (const r of rows) {
-      //     await tx.exec`
-      //         INSERT INTO voucher_rows (
-      //             voucher_id,
-      //             account_number,
-      //             description,
-      //             debit,
-      //             credit,
-      //             raw_json
-      //         ) VALUES (
-      //             ${inserted!.id},
-      //             ${Number(r.Account)},
-      //             ${r.Description || null},
-      //             ${parseAmount(r.Debit)},
-      //             ${parseAmount(r.Credit)},
-      //             ${JSON.stringify(r)}::jsonb
-      //         );
-      //     `;
-      //   }
 
       await tx.commit();
     } catch (error) {
