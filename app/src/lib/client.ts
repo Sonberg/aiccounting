@@ -82,6 +82,13 @@ export interface ClientOptions {
 
     /** Default RequestInit to be used for the client */
     requestInit?: Omit<RequestInit, "headers"> & { headers?: Record<string, string> }
+
+    /**
+     * Allows you to set the authentication data to be used for each
+     * request either by passing in a static object or by passing in
+     * a function which returns a new object for each request.
+     */
+    auth?: iam.AuthRequest | AuthDataGenerator
 }
 
 export namespace core {
@@ -131,8 +138,12 @@ export namespace fortnox {
 }
 
 export namespace iam {
+    export interface AuthRequest {
+        authorization: string
+    }
+
     export interface User {
-        id: string
+        id: number
         email: string
         "display_name": string
         "created_at": string
@@ -147,6 +158,7 @@ export namespace iam {
             this.bankIdStatus = this.bankIdStatus.bind(this)
             this.connectFortnox = this.connectFortnox.bind(this)
             this.connectKlarna = this.connectKlarna.bind(this)
+            this.getUserMe = this.getUserMe.bind(this)
             this.login = this.login.bind(this)
             this.signup = this.signup.bind(this)
         }
@@ -171,6 +183,12 @@ export namespace iam {
 
         public async connectKlarna(id: string): Promise<void> {
             await this.baseClient.callTypedAPI("POST", `/tenants/${encodeURIComponent(id)}/klarna/connect`)
+        }
+
+        public async getUserMe(): Promise<endpoints.GetUserMeResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("GET", `/users/me`)
+            return await resp.json() as endpoints.GetUserMeResponse
         }
 
         public async login(params: endpoints.LoginRequest): Promise<endpoints.LoginResponse> {
@@ -318,6 +336,10 @@ export namespace endpoints {
         data: klarna.Payout[]
     }
 
+    export interface GetUserMeResponse {
+        data: User | null
+    }
+
     export interface LoginRequest {
         email: string
         password: string
@@ -325,7 +347,9 @@ export namespace endpoints {
 
     export interface LoginResponse {
         success: boolean
-        token?: string
+        accessToken: string | null
+        refreshToken: string | null
+        user: iam.User | null
     }
 
     export interface PollBankIdRequest {
@@ -334,6 +358,13 @@ export namespace endpoints {
 
     export interface StartBankIdRequest {
         personalNumber: string
+    }
+
+    export interface User {
+        id: string
+        email: string
+        "display_name": string
+        "created_at": string
     }
 }
 
@@ -541,6 +572,11 @@ type CallParameters = Omit<RequestInit, "method" | "body" | "headers"> & {
     query?: Record<string, string | string[]>
 }
 
+// AuthDataGenerator is a function that returns a new instance of the authentication data required by this API
+export type AuthDataGenerator = () =>
+  | iam.AuthRequest
+  | Promise<iam.AuthRequest | undefined>
+  | undefined;
 
 // A fetcher is the prototype for the inbuilt Fetch function
 export type Fetcher = typeof fetch;
@@ -552,6 +588,7 @@ class BaseClient {
     readonly fetcher: Fetcher
     readonly headers: Record<string, string>
     readonly requestInit: Omit<RequestInit, "headers"> & { headers?: Record<string, string> }
+    readonly authGenerator?: AuthDataGenerator
 
     constructor(baseURL: string, options: ClientOptions) {
         this.baseURL = baseURL
@@ -571,9 +608,41 @@ class BaseClient {
         } else {
             this.fetcher = boundFetch
         }
+
+        // Setup an authentication data generator using the auth data token option
+        if (options.auth !== undefined) {
+            const auth = options.auth
+            if (typeof auth === "function") {
+                this.authGenerator = auth
+            } else {
+                this.authGenerator = () => auth
+            }
+        }
     }
 
     async getAuthData(): Promise<CallParameters | undefined> {
+        let authData: iam.AuthRequest | undefined;
+
+        // If authorization data generator is present, call it and add the returned data to the request
+        if (this.authGenerator) {
+            const mayBePromise = this.authGenerator();
+            if (mayBePromise instanceof Promise) {
+                authData = await mayBePromise;
+            } else {
+                authData = mayBePromise;
+            }
+        }
+
+        if (authData) {
+            const data: CallParameters = {};
+
+            data.headers = makeRecord<string, string>({
+                authorization: authData.authorization,
+            });
+
+            return data;
+        }
+
         return undefined;
     }
 

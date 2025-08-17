@@ -13,13 +13,12 @@ interface LoginRequest {
 
 interface LoginResponse {
   success: boolean;
-  token?: string;
+  accessToken: string | null;
+  refreshToken: string | null;
+  user: User | null;
 }
 
-interface UserAuth {
-  id: string;
-  email: string;
-  display_name: string;
+interface UserAuth extends User {
   password_hash: string;
   password_salt: string;
 }
@@ -35,29 +34,45 @@ export const login = api<LoginRequest, LoginResponse>(
     expose: true,
   },
   async (req) => {
-    const user = await db.queryRow<UserAuth>`
-    SELECT u.id, u.display_name, u.email, ap.password_hash, ap.password_salt
+    const row = await db.queryRow<UserAuth>`
+    SELECT u.*, ap.password_hash, ap.password_salt
     FROM users u
     JOIN auth_passwords ap ON ap.user_id = u.id
     WHERE u.email = ${req.email}
   `;
 
-    if (!user) {
-      return { success: false };
+    if (!row) {
+      return {
+        success: false,
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+      };
     }
 
-    const { id, display_name, email, password_hash, password_salt } = user;
+    const { password_hash, password_salt, ...user } = row;
     const hash = hashPassword(req.password, password_salt);
 
     if (hash !== password_hash) {
-      return { success: false };
+      return {
+        success: false,
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+      };
     }
 
     return {
       success: true,
-      token: jwt.sign({ sub: id, name: display_name, email }, JWT_SECRET(), {
-        expiresIn: '1h',
-      }),
+      refreshToken: null, // Implement refresh token logic if needed
+      accessToken: jwt.sign(
+        { sub: user.id, name: user.display_name, email: user.email },
+        JWT_SECRET(),
+        {
+          expiresIn: '1h',
+        }
+      ),
+      user,
     };
   }
 );

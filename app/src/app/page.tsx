@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from './layout';
+import { encore } from '@/lib';
 import { TransactionCard } from '@/components/TransactionCard';
 
 export default function Home() {
@@ -9,7 +9,7 @@ export default function Home() {
   const all = useQuery({
     queryKey: ['get', from],
     queryFn: async () => {
-      const { data } = await apiClient.klarna_fortnox.get({
+      const { data } = await encore.klarna_fortnox.get({
         from,
       });
 
@@ -21,7 +21,7 @@ export default function Home() {
   const status = useQuery({
     queryKey: ['status', from],
     queryFn: async () => {
-      const { data } = await apiClient.klarna_fortnox.status({
+      const { data } = await encore.klarna_fortnox.status({
         from,
       });
 

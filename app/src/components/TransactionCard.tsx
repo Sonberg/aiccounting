@@ -3,8 +3,8 @@ import classNames from 'classnames';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { TransactionSuggestionCard } from './TransactionSuggestionCard';
-import { apiClient } from '../app/layout';
 import { core, klarna } from '../lib/client';
+import { encore } from '@/lib';
 
 interface TransactionCardProps {
   payout: klarna.Payout;
@@ -18,7 +18,7 @@ export function TransactionCard({ payout, status }: TransactionCardProps) {
   const { mutateAsync, isPending } = useMutation({
     mutationKey: ['suggest', payout.payment_reference],
     mutationFn: async () => {
-      const { data } = await apiClient.klarna_fortnox.suggest({
+      const { data } = await encore.klarna_fortnox.suggest({
         paymentReference: payout.payment_reference,
       });
 

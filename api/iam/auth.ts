@@ -11,7 +11,6 @@ interface AuthRequest {
 
 interface AuthResponse {
   userID: string;
-  user: User;
 }
 
 export const auth = authHandler<AuthRequest, AuthResponse>(async (params) => {
@@ -47,7 +46,6 @@ export const auth = authHandler<AuthRequest, AuthResponse>(async (params) => {
 
   return {
     userID: `${userID}`,
-    user,
   };
 });
 

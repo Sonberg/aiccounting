@@ -1,4 +1,6 @@
 import { api } from 'encore.dev/api';
+import { getAuthData } from '~encore/auth';
+import { db } from '../database';
 
 interface User {
   id: string;
@@ -19,8 +21,15 @@ export const getUserMe = api<void, GetUserMeResponse>(
     expose: true,
   },
   async () => {
+    const userId = getAuthData()!.userID;
+    const user = await db.queryRow<User>`
+        SELECT *
+        FROM users
+        WHERE id = ${Number(userId)}
+      `;
+
     return {
-      data: null,
+      data: user,
     };
   }
 );
