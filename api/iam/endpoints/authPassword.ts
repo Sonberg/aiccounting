@@ -1,10 +1,9 @@
 import { pbkdf2Sync, randomBytes } from 'crypto';
-import jwt from 'jsonwebtoken';
-
 import { api } from 'encore.dev/api';
-import { db } from '../database';
+
+import { db, setRefreshToken } from '../database';
 import { User } from '../types';
-import { JWT_SECRET } from '../secrets';
+import { createAccessToken, createRefreshToken } from '../utils/tokens';
 
 interface LoginRequest {
   email: string;
@@ -62,16 +61,20 @@ export const login = api<LoginRequest, LoginResponse>(
       };
     }
 
+    const refreshToken = createRefreshToken();
+
+    await setRefreshToken({
+      user,
+      refreshToken,
+      userAgent: null,
+      ipAddress: null,
+      lastRefreshTokenId: null,
+    });
+
     return {
       success: true,
-      refreshToken: null, // Implement refresh token logic if needed
-      accessToken: jwt.sign(
-        { sub: user.id, name: user.display_name, email: user.email },
-        JWT_SECRET(),
-        {
-          expiresIn: '1h',
-        }
-      ),
+      refreshToken: createRefreshToken(),
+      accessToken: createAccessToken(user),
       user,
     };
   }
@@ -94,19 +97,24 @@ export const signup = api<CreateUserRequest, User>(
     const hash = hashPassword(req.password, salt);
     const transaction = await db.begin();
 
-    const user = await transaction.queryRow<User>`
+    try {
+      const user = await transaction.queryRow<User>`
         INSERT INTO users (email, display_name)
         VALUES (${req.email}, ${req.displayName || null})
         RETURNING id, email, display_name, created_at
     `;
 
-    await transaction.exec`
+      await transaction.exec`
         INSERT INTO auth_passwords (user_id, password_hash, password_salt, password_algo)
         VALUES (${user!.id}, ${hash}, ${salt}, 'pbkdf2-sha512')
   `;
 
-    await transaction.commit();
+      await transaction.commit();
 
-    return user!;
+      return user!;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 );

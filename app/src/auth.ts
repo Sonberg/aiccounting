@@ -33,7 +33,7 @@ const authOptions: AuthOptions = {
   ],
   session: { strategy: 'jwt' },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.accessToken = user.accessToken!;
         token.refreshToken = user.refreshToken;
@@ -65,7 +65,7 @@ const authOptions: AuthOptions = {
 
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       session.accessToken = token.accessToken;
       session.error = token.error;
       return session;

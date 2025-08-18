@@ -1,14 +1,13 @@
 'use client';
 
-import { encore } from '@/lib';
+import { useEncore } from '@/contexts/Encore';
 import { LoginForm } from './components/LoginForm';
 import { SignupForm } from './components/SignupForm';
 import { signIn, useSession } from 'next-auth/react';
 
 export default function Page() {
   const session = useSession();
-
-  console.log(session);
+  const { client } = useEncore();
 
   return (
     <div>
@@ -20,7 +19,7 @@ export default function Page() {
 
       <SignupForm
         onSubmit={async (email, displayName, password) =>
-          await encore.iam.signup({
+          await client.iam.signup({
             email,
             displayName,
             password,
@@ -37,7 +36,7 @@ export default function Page() {
 
           console.log(res);
 
-          await encore.iam.getUserMe();
+          await client.iam.getUserMe();
 
           return res;
         }}

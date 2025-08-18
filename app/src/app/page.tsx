@@ -1,15 +1,17 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { encore } from '@/lib';
 import { TransactionCard } from '@/components/TransactionCard';
+import { useEncore } from '../contexts/Encore';
 
 export default function Home() {
+  const { client } = useEncore();
+
   const from = '2025-07';
   const all = useQuery({
     queryKey: ['get', from],
     queryFn: async () => {
-      const { data } = await encore.klarna_fortnox.get({
+      const { data } = await client.klarna_fortnox.get({
         from,
       });
 
@@ -21,7 +23,7 @@ export default function Home() {
   const status = useQuery({
     queryKey: ['status', from],
     queryFn: async () => {
-      const { data } = await encore.klarna_fortnox.status({
+      const { data } = await client.klarna_fortnox.status({
         from,
       });
 

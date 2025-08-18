@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { useState } from 'react';
 import { TransactionSuggestionCard } from './TransactionSuggestionCard';
 import { core, klarna } from '../lib/client';
-import { encore } from '@/lib';
+import { useEncore } from '../contexts/Encore';
 
 interface TransactionCardProps {
   payout: klarna.Payout;
@@ -15,10 +15,12 @@ export function TransactionCard({ payout, status }: TransactionCardProps) {
   const [suggestion, setSuggestion] =
     useState<core.TransactionSuggestion | null>(null);
 
+  const { client } = useEncore();
+
   const { mutateAsync, isPending } = useMutation({
     mutationKey: ['suggest', payout.payment_reference],
     mutationFn: async () => {
-      const { data } = await encore.klarna_fortnox.suggest({
+      const { data } = await client.klarna_fortnox.suggest({
         paymentReference: payout.payment_reference,
       });
 
