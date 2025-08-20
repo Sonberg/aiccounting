@@ -4,6 +4,7 @@ import { User } from './types';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from './secrets';
 import { db } from './database';
+import { log } from 'node:console';
 
 interface AuthRequest {
   authorization: Header<'Authorization'>;
@@ -23,6 +24,7 @@ export const auth = authHandler<AuthRequest, AuthResponse>(async (params) => {
   const userID = await new Promise<number>((resolve, reject) => {
     jwt.verify(token, JWT_SECRET(), (err, decoded) => {
       if (err) {
+        log('JWT verification error:', err);
         throw APIError.unauthenticated('Invalid token');
       }
 

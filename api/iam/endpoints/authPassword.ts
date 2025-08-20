@@ -3,7 +3,8 @@ import { api } from 'encore.dev/api';
 
 import { db, setRefreshToken } from '../database';
 import { User } from '../types';
-import { createAccessToken, createRefreshToken } from '../utils/tokens';
+import { createAccessToken, createRefreshToken } from '../helpers/tokens';
+import dayjs from 'dayjs';
 
 interface LoginRequest {
   email: string;
@@ -14,6 +15,7 @@ interface LoginResponse {
   success: boolean;
   accessToken: string | null;
   refreshToken: string | null;
+  refreshTokenExpiresAt: string | null;
   user: User | null;
 }
 
@@ -46,6 +48,7 @@ export const login = api<LoginRequest, LoginResponse>(
         user: null,
         accessToken: null,
         refreshToken: null,
+        refreshTokenExpiresAt: null,
       };
     }
 
@@ -58,10 +61,12 @@ export const login = api<LoginRequest, LoginResponse>(
         user: null,
         accessToken: null,
         refreshToken: null,
+        refreshTokenExpiresAt: null,
       };
     }
 
     const refreshToken = createRefreshToken();
+    const accessToken = createAccessToken(user);
 
     await setRefreshToken({
       user,
@@ -73,8 +78,9 @@ export const login = api<LoginRequest, LoginResponse>(
 
     return {
       success: true,
-      refreshToken: createRefreshToken(),
-      accessToken: createAccessToken(user),
+      refreshTokenExpiresAt: dayjs().add(30, 'days').toISOString(),
+      refreshToken: refreshToken,
+      accessToken: accessToken,
       user,
     };
   }

@@ -3,13 +3,13 @@ import { User } from '../types';
 import { JWT_SECRET } from '../secrets';
 import { createHash, randomBytes } from 'crypto';
 
-export function createAccessToken(user: User): string {
+const EXPIRES_IN = 2 * 60 * 1000; // 2 minutes
+
+export function createAccessToken(user: User) {
   return jwt.sign(
-    { sub: user.id, name: user.display_name, email: user.email },
+    { sub: user.id.toString(), email: user.email, name: user.display_name },
     JWT_SECRET(),
-    {
-      expiresIn: '1h',
-    }
+    { expiresIn: EXPIRES_IN }
   );
 }
 

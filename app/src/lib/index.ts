@@ -1,15 +1,13 @@
-import { getServerSession } from 'next-auth/next';
 import Client, { Local } from './client';
-import { authOptions } from '@/auth';
+import { getAuth } from '../contexts/Auth';
 
+export const url = Local;
 export async function getEncoreClient() {
-  const session = (await getServerSession(authOptions)) as any;
+  const auth = await getAuth();
 
-  return new Client(Local, {
+  return new Client(url, {
     auth: {
-      authorization: session?.accessToken
-        ? `Bearer ${session.accessToken}`
-        : '',
+      authorization: auth?.accessToken ? `Bearer ${auth.accessToken}` : '',
     },
   });
 }

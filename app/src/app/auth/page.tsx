@@ -3,40 +3,46 @@
 import { useEncore } from '@/contexts/Encore';
 import { LoginForm } from './components/LoginForm';
 import { SignupForm } from './components/SignupForm';
-import { signIn, useSession } from 'next-auth/react';
+import { useAuth } from '../../contexts/Auth';
 
 export default function Page() {
-  const session = useSession();
-  const { client } = useEncore();
+  const { login } = useAuth();
+  const { user, isAuthenticated, getClient } = useEncore();
 
   return (
     <div>
       <pre className="w-4/3">
-        {session.status === 'authenticated'
-          ? JSON.stringify(session.data.user, null, 2)
-          : 'Not authenticated'}
+        {isAuthenticated ? JSON.stringify(user, null, 2) : 'Not authenticated'}
       </pre>
 
       <SignupForm
         onSubmit={async (email, displayName, password) =>
-          await client.iam.signup({
-            email,
-            displayName,
-            password,
-          })
+          await getClient().then((client) =>
+            client.iam.signup({
+              email,
+              displayName,
+              password,
+            })
+          )
         }
       />
       <LoginForm
         onSubmit={async (email, password) => {
-          const res = await signIn('credentials', {
+          const client = await getClient();
+          const res = await client.iam.login({
             email,
             password,
-            redirect: false,
           });
 
-          console.log(res);
+          if (!res.success) {
+            return;
+          }
 
-          await client.iam.getUserMe();
+          login({
+            accessToken: res.accessToken!,
+            refreshToken: res.refreshToken!,
+            refreshTokenExpiresAt: res.refreshTokenExpiresAt!,
+          });
 
           return res;
         }}

@@ -1,6 +1,6 @@
 import { SQLDatabase } from 'encore.dev/storage/sqldb';
 import { User } from './types';
-import { hashRefreshToken } from './utils/tokens';
+import { hashRefreshToken } from './helpers/tokens';
 
 export const db = new SQLDatabase('iam', {
   migrations: './migrations',

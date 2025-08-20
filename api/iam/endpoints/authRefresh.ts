@@ -4,7 +4,9 @@ import {
   createAccessToken,
   createRefreshToken,
   hashRefreshToken,
-} from '../utils/tokens';
+} from '../helpers/tokens';
+import { log } from 'console';
+import dayjs from 'dayjs';
 
 interface AuthRefreshToken {
   id: number;
@@ -25,11 +27,12 @@ interface AuthRefreshRequest {
 
 interface AuthRefreshResponse {
   accessToken: string;
-  refreshToken?: string; // if you do rotation
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
 }
 
 export const refresh = api<AuthRefreshRequest, AuthRefreshResponse>(
-  { expose: true, method: 'POST', path: '/auth/refresh' },
+  { expose: true, method: 'POST', path: '/auth/refresh', auth: false },
   async ({ refreshToken, userAgent, ipAddress }) => {
     const hashed = hashRefreshToken(refreshToken);
 
@@ -39,6 +42,8 @@ export const refresh = api<AuthRefreshRequest, AuthRefreshResponse>(
       WHERE token_hash = ${hashed}
       LIMIT 1
     `;
+
+    log(hashed, token);
 
     if (!token) {
       throw new Error('Invalid refresh token');
@@ -62,15 +67,16 @@ export const refresh = api<AuthRefreshRequest, AuthRefreshResponse>(
 
     await setRefreshToken({
       user,
-      refreshToken,
+      refreshToken: newRefreshToken,
       userAgent: userAgent || null,
       ipAddress: ipAddress || null,
       lastRefreshTokenId: token.id,
     });
 
     return {
-      accessToken,
+      refreshTokenExpiresAt: dayjs().add(30, 'days').toISOString(),
       refreshToken: newRefreshToken,
+      accessToken: accessToken,
     };
   }
 );

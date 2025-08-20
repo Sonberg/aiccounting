@@ -160,6 +160,7 @@ export namespace iam {
             this.connectKlarna = this.connectKlarna.bind(this)
             this.getUserMe = this.getUserMe.bind(this)
             this.login = this.login.bind(this)
+            this.refresh = this.refresh.bind(this)
             this.signup = this.signup.bind(this)
         }
 
@@ -195,6 +196,12 @@ export namespace iam {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI("POST", `/auth/login`, JSON.stringify(params))
             return await resp.json() as endpoints.LoginResponse
+        }
+
+        public async refresh(params: endpoints.AuthRefreshRequest): Promise<endpoints.AuthRefreshResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/auth/refresh`, JSON.stringify(params))
+            return await resp.json() as endpoints.AuthRefreshResponse
         }
 
         public async signup(params: endpoints.CreateUserRequest): Promise<User> {
@@ -322,6 +329,18 @@ export namespace klarna_fortnox {
 }
 
 export namespace endpoints {
+    export interface AuthRefreshRequest {
+        refreshToken: string
+        userAgent?: string
+        ipAddress?: string
+    }
+
+    export interface AuthRefreshResponse {
+        accessToken: string
+        refreshToken: string
+        refreshTokenExpiresAt: string
+    }
+
     export interface CreateUserRequest {
         email: string
         displayName?: string
@@ -349,6 +368,7 @@ export namespace endpoints {
         success: boolean
         accessToken: string | null
         refreshToken: string | null
+        refreshTokenExpiresAt: string | null
         user: iam.User | null
     }
 

@@ -1,8 +1,10 @@
 import { Geist, Geist_Mono } from 'next/font/google';
-import { getSession } from '@/auth';
+import { CookiesProvider } from 'next-client-cookies/server';
+
+import Providers from './providers';
+import { getAuth } from '../contexts/Auth';
 
 import './globals.css';
-import Providers from './providers';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -19,16 +21,24 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession();
+  const auth = await getAuth();
 
   return (
-    <Providers session={session}>
-      <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-          children={children}
-        />
-      </html>
-    </Providers>
+    <CookiesProvider>
+      <Providers
+        tokens={{
+          accessToken: auth?.accessToken || null,
+          refreshToken: auth?.refreshToken || null,
+          refreshTokenExpiresAt: auth?.refreshTokenExpiresAt || null,
+        }}
+      >
+        <html lang="en">
+          <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+            children={children}
+          />
+        </html>
+      </Providers>
+    </CookiesProvider>
   );
 }

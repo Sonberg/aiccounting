@@ -1,22 +1,23 @@
 'use client';
 
-import { createContext, ReactNode, useContext, useMemo } from 'react';
-import Client, { Local } from '@/lib/client';
-import { useSession } from 'next-auth/react';
-import { Session } from 'next-auth';
+import { createContext, ReactNode, useCallback, useContext } from 'react';
+import Client, { endpoints, Local } from '@/lib/client';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from './Auth';
 
 type EncoreContextType = {
-  client: Client;
+  getClient: () => Promise<Client>;
+  user: endpoints.User | null;
+  isAuthenticated: boolean;
 };
 
 const EncoreContext = createContext<EncoreContextType>({
-  client: null!,
+  getClient() {
+    throw new Error('getClient must be implemented');
+  },
+  user: null,
+  isAuthenticated: false,
 });
-
-type EncoreSession = Session & {
-  accessToken?: string | null;
-  status: 'authenticated' | string;
-};
 
 export function useEncore() {
   const context = useContext(EncoreContext);
@@ -28,22 +29,40 @@ export function useEncore() {
 }
 
 export function EncoreProvider({ children }: { children: ReactNode }) {
-  const session = useSession() as unknown as EncoreSession;
-  const client = useMemo(
-    () =>
+  const auth = useAuth();
+
+  console.log(auth);
+
+  const getClient = useCallback(
+    async () =>
       new Client(Local, {
         auth: {
-          authorization:
-            session?.status === 'authenticated' && session?.accessToken
-              ? `Bearer ${session.accessToken}`
-              : '',
+          authorization: auth.isAuthenticated
+            ? `Bearer ${await auth?.getAccessToken()}`
+            : '',
         },
       }),
-    [session.accessToken, session.status]
+    [auth.isAuthenticated, auth.getAccessToken]
   );
+
+  const me = useQuery({
+    queryKey: ['iam', 'me'],
+    queryFn: () =>
+      getClient()
+        .then((client) => client.iam.getUserMe())
+        .then((res) => res.data),
+    enabled: auth.isAuthenticated,
+    placeholderData: null,
+  });
+
   return (
-    <EncoreContext.Provider value={{ client }}>
-      {children}
-    </EncoreContext.Provider>
+    <EncoreContext.Provider
+      children={children}
+      value={{
+        getClient,
+        user: me.data || null,
+        isAuthenticated: auth.isAuthenticated,
+      }}
+    />
   );
 }

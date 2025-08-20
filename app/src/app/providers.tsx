@@ -1,10 +1,9 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { Session } from 'next-auth';
-import { SessionProvider } from 'next-auth/react';
 import { ReactNode } from 'react';
 import { EncoreProvider } from '../contexts/Encore';
+import { AuthProvider } from '../contexts/Auth';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,16 +17,20 @@ const queryClient = new QueryClient({
 });
 
 type Props = {
-  session: Session | null;
+  tokens: {
+    accessToken: string | null | undefined;
+    refreshToken: string | null | undefined;
+    refreshTokenExpiresAt: string | null | undefined;
+  };
   children: ReactNode;
 };
 
-export default function Providers({ session, children }: Props) {
+export default function Providers({ tokens, children }: Props) {
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider session={session}>
+      <AuthProvider tokens={tokens}>
         <EncoreProvider>{children}</EncoreProvider>
-      </SessionProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
