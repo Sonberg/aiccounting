@@ -17,6 +17,7 @@ interface GetVouchersRequest {
   from?: string;
   to?: string;
   voucherSeries?: string;
+  lastModified?: string;
   limit?: number;
 }
 
@@ -30,7 +31,7 @@ export const getVouchers = api<GetVouchersRequest, GetVouchersResponse>(
     method: 'GET',
     expose: false,
   },
-  async ({ from, to, voucherSeries, limit }) => {
+  async ({ from, to, voucherSeries, limit, lastModified }) => {
     const token = await getToken(1);
     const fortnox = getFortnoxClient(token);
 
@@ -43,6 +44,9 @@ export const getVouchers = api<GetVouchersRequest, GetVouchersResponse>(
         params: {
           fromdate: from ? dayjs(from).format('YYYY-MM-DD') : undefined,
           todate: to ? dayjs(to).format('YYYY-MM-DD') : undefined,
+          lastmodified: lastModified
+            ? dayjs(lastModified).format('YYYY-MM-DD HH:mm')
+            : undefined,
           voucherseries: voucherSeries,
           page: currentPage,
           sortby: 'vouchernumber',

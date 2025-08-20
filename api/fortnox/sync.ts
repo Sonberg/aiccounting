@@ -2,7 +2,7 @@ import { syncTenant } from '@/iam/topics';
 import { log } from 'console';
 import { Attribute, Subscription, Topic } from 'encore.dev/pubsub';
 import { fortnox } from '~encore/clients';
-import { db, getToken } from './database';
+import { clearVouchers, db, getToken } from './database';
 import { getFortnoxClient } from './client';
 import { FortnoxVoucher } from './types';
 
@@ -23,12 +23,38 @@ export const syncVoucher = new Topic<SyncVoucherParams>('sync-voucher', {
 export const _1 = new Subscription(syncTenant, 'fortnox-vouchers', {
   handler: async (params) => {
     const row = await db.queryRow<SyncedAt>`
-      SELECT MAX(synced_at) FROM vouchers WHERE tenant_id = ${params.tenantId}
+      SELECT synced_at FROM vouchers WHERE tenant_id = ${params.tenantId} ORDER BY synced_at DESC LIMIT 1
     `;
 
+    log('Last synced at:', row?.synced_at);
+
     const vouchers = await fortnox.getVouchers({
-      from: row?.synced_at,
+      lastModified: row?.synced_at,
     });
+
+    log(vouchers.data.length, 'vouchers found');
+
+    const groupedVouchers = vouchers.data.reduce<Record<string, number>>(
+      (acc, voucher) => {
+        const series = voucher.VoucherSeries;
+        const number = voucher.VoucherNumber;
+
+        if (!acc[series]) {
+          acc[series] = number;
+        } else if (number < acc[series]) {
+          acc[series] = number;
+        }
+
+        return acc;
+      },
+      {}
+    );
+
+    for (const series in groupedVouchers) {
+      await clearVouchers(series, groupedVouchers[series], params.tenantId);
+    }
+
+    log(groupedVouchers);
 
     for (const voucher of vouchers.data) {
       await syncVoucher.publish({

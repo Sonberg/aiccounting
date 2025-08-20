@@ -1,6 +1,7 @@
 import { api } from 'encore.dev/api';
 import { db } from '../database';
 import { syncTenant } from '../topics';
+import { log } from 'console';
 
 interface CreateTenantRequest {
   name: string;
@@ -37,10 +38,11 @@ export const sync = api<SyncTenantRequest>(
     path: '/tenants/:id/sync',
     method: 'POST',
   },
-  async (params) =>
+  async (params) => {
     await syncTenant.publish({
       tenantId: params.id,
-    })
+    });
+  }
 );
 
 export const connectKlarna = api(

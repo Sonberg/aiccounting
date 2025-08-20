@@ -2,6 +2,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { SQLDatabase } from 'encore.dev/storage/sqldb';
 import { isTokenValid } from './utlls';
 import { refreshToken } from './client';
+import exp from 'constants';
 
 export const db = new SQLDatabase('fortnox', {
   migrations: './migrations',
@@ -78,4 +79,17 @@ export async function getToken(tenantId: number): Promise<Token> {
     createdAt: dayjs(),
     isValid: true,
   };
+}
+
+export async function clearVouchers(
+  series: string,
+  fromNumber: number,
+  tenantId: number
+) {
+  return await db.rawExec(
+    `DELETE FROM vouchers WHERE voucher_series = $1 AND tenant_id = $2 AND voucher_number >= $3`,
+    series,
+    tenantId,
+    fromNumber
+  );
 }
