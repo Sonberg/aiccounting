@@ -1,13 +1,15 @@
 import { syncTenant } from '@/iam/topics';
 import { log } from 'console';
 import { Attribute, Subscription, Topic } from 'encore.dev/pubsub';
-import { fortnox } from '~encore/clients';
+import { fortnox, iam } from '~encore/clients';
 import { clearVouchers, db, getToken } from './database';
 import { getFortnoxClient } from './client';
 import { FortnoxVoucher } from './types';
 
 export interface SyncVoucherParams {
-  tenantId: Attribute<number>;
+  partition: Attribute<string | number | 'singleton'>;
+  tenantId: number;
+  jobId: number;
   voucher: FortnoxVoucher;
 }
 
@@ -16,7 +18,7 @@ type SyncedAt = {
 };
 
 export const syncVoucher = new Topic<SyncVoucherParams>('sync-voucher', {
-  orderingAttribute: 'tenantId',
+  orderingAttribute: 'partition',
   deliveryGuarantee: 'exactly-once',
 });
 
@@ -26,13 +28,9 @@ export const _1 = new Subscription(syncTenant, 'fortnox-vouchers', {
       SELECT synced_at FROM vouchers WHERE tenant_id = ${params.tenantId} ORDER BY synced_at DESC LIMIT 1
     `;
 
-    log('Last synced at:', row?.synced_at);
-
     const vouchers = await fortnox.getVouchers({
       lastModified: row?.synced_at,
     });
-
-    log(vouchers.data.length, 'vouchers found');
 
     const groupedVouchers = vouchers.data.reduce<Record<string, number>>(
       (acc, voucher) => {
@@ -58,7 +56,9 @@ export const _1 = new Subscription(syncTenant, 'fortnox-vouchers', {
 
     for (const voucher of vouchers.data) {
       await syncVoucher.publish({
+        partition: 'singleton',
         tenantId: params.tenantId,
+        jobId: params.jobId,
         voucher,
       });
     }
@@ -67,25 +67,42 @@ export const _1 = new Subscription(syncTenant, 'fortnox-vouchers', {
 
 export const _2 = new Subscription(syncTenant, 'fortnox-accounts', {
   handler: async (params) => {
+    const item = await iam.syncItemStart({
+      jobId: params.jobId,
+      source: 'fortnox',
+      sourceType: 'account',
+      sourceId: null,
+    });
+
     log('Sync Fortnox account', params.tenantId);
+
+    await iam.syncItemEnd({
+      jobId: params.jobId,
+      jobItemId: item.jobItemId,
+      status: 'success',
+    });
   },
 });
 
 export const _3 = new Subscription(syncVoucher, 'progress', {
-  handler: async ({ tenantId, voucher }) => {
+  handler: async ({ tenantId, voucher, jobId }) => {
+    const item = await iam.syncItemStart({
+      jobId: jobId,
+      source: 'fortnox',
+      sourceType: 'voucher',
+      sourceId: voucher.VoucherSeries + '/' + voucher.VoucherNumber,
+    });
+
     const token = await getToken(tenantId);
     const client = getFortnoxClient(token);
     const { data } = await client.get<{ Voucher: FortnoxVoucher }>(
       `/3/vouchers/${voucher.VoucherSeries}/${voucher.VoucherNumber}`
     );
 
-    log(JSON.stringify(data.Voucher, null, 2));
-
-    const rows = data.Voucher.VoucherRows ?? [];
     const tx = await db.begin();
 
     try {
-      const inserted = await tx.queryRow<{ id: number }>`
+      await tx.queryRow<{ id: number }>`
         INSERT INTO vouchers (
           tenant_id,
           approval_state,
@@ -115,10 +132,21 @@ export const _3 = new Subscription(syncVoucher, 'progress', {
       `;
 
       await tx.commit();
+      await iam.syncItemEnd({
+        jobId: jobId,
+        jobItemId: item.jobItemId,
+        status: 'success',
+      });
     } catch (error) {
       console.log(error);
 
       await tx.rollback();
+      await iam.syncItemEnd({
+        jobId: jobId,
+        jobItemId: item.jobItemId,
+        status: 'failed',
+        error: (error as Error)?.message,
+      });
     }
   },
 });

@@ -7,5 +7,8 @@
   },
   "yaml.schemas": {
     "https://www.artillery.io/schema.json": []
+  },
+  "[sql]": {
+    "editor.defaultFormatter": "inferrinizzard.prettier-sql-vscode"
   }
 }

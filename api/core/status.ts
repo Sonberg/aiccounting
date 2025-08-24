@@ -1,5 +1,6 @@
 import { api } from 'encore.dev/api';
 import { client } from './open-ai';
+import { extractJson } from '../utils/extractJson';
 
 interface CoreStatusParams {
   fileNames: string[];
@@ -17,7 +18,7 @@ export interface TransactionStatus {
   voucherSeries: string | null;
   paymentReference: string | null;
   reason: string;
-  confidence: string;
+  state: string;
 }
 
 export const status = api<CoreStatusParams, CoreStatusResponse>(
@@ -62,7 +63,7 @@ export const status = api<CoreStatusParams, CoreStatusResponse>(
         "voucherSeries": "string or null",
         "paymentReference": "string or null",
         "reason": "short explanation (include matching voucherNumber if found)",
-        "confidence": "High|Medium|Low"
+        "state": "NoMatch|LowSimularity|HighSimularity|Identical"
       }
     ]
     `;
@@ -75,7 +76,7 @@ export const status = api<CoreStatusParams, CoreStatusResponse>(
       input: [
         {
           role: 'user',
-          content: []??[
+          content: [
             ...files.data
               .filter((x) => params.fileNames.includes(x.filename))
               .map((x) => ({
@@ -91,8 +92,8 @@ export const status = api<CoreStatusParams, CoreStatusResponse>(
       ],
     });
 
-    const data = JSON.parse(response.output_text!) as TransactionStatus[];
+    console.log('response received', response.output_text);
 
-    return { data };
+    return { data: extractJson(response.output_text) };
   }
 );

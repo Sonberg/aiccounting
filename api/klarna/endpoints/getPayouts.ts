@@ -8,7 +8,7 @@ interface KlarnaResponse {
 }
 
 interface GetPayoutsParams {
-  from: string;
+  from?: string;
 }
 
 interface GetPayoutsResponse {
@@ -22,9 +22,17 @@ export const getPayouts = api<GetPayoutsParams, GetPayoutsResponse>(
     method: 'GET',
   },
   async (params) => {
-    const startDate = encodeURIComponent(new Date(params.from).toISOString());
+    const startDate = params.from
+      ? new Date(params.from).toISOString()
+      : undefined;
+
     const res = await KlarnaRestClient.get<KlarnaResponse>(
-      `/settlements/v1/payouts?start_date=${startDate}`
+      `/settlements/v1/payouts`,
+      {
+        params: {
+          start_date: startDate,
+        },
+      }
     );
 
     const payouts = [res.data];

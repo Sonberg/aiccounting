@@ -5,12 +5,13 @@ import { TransactionCard } from '@/components/TransactionCard';
 import { useEncore } from '../contexts/Encore';
 
 export default function Home() {
-  const { client } = useEncore();
+  const { getClient } = useEncore();
 
   const from = '2025-07';
   const all = useQuery({
     queryKey: ['get', from],
     queryFn: async () => {
+      const client = await getClient();
       const { data } = await client.klarna_fortnox.get({
         from,
       });
@@ -23,6 +24,7 @@ export default function Home() {
   const status = useQuery({
     queryKey: ['status', from],
     queryFn: async () => {
+      const client = await getClient();
       const { data } = await client.klarna_fortnox.status({
         from,
       });

@@ -49,7 +49,7 @@ export const status = api<
             voucherSeries: null,
             voucherNumber: null,
             alreadyBooked: false,
-            confidence: 'High',
+            state: 'NoMatch',
             reason: 'No marching voucher found',
           }
       ),
