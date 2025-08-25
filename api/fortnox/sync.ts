@@ -5,6 +5,8 @@ import { fortnox, iam } from '~encore/clients';
 import { clearVouchers, db, getToken } from './database';
 import { getFortnoxClient } from './client';
 import { FortnoxVoucher } from './types';
+import { sleep } from '../utils/sleep';
+import dayjs from 'dayjs';
 
 export interface SyncVoucherParams {
   partition: Attribute<string | number | 'singleton'>;
@@ -19,49 +21,76 @@ type SyncedAt = {
 
 export const syncVoucher = new Topic<SyncVoucherParams>('sync-voucher', {
   orderingAttribute: 'partition',
-  deliveryGuarantee: 'exactly-once',
+  deliveryGuarantee: 'at-least-once',
 });
 
 export const _1 = new Subscription(syncTenant, 'fortnox-vouchers', {
   handler: async (params) => {
+    const item = await iam.syncItemStart({
+      jobId: params.jobId,
+      source: 'fortnox',
+      sourceType: 'voucher',
+      sourceId: null,
+    });
+
     const row = await db.queryRow<SyncedAt>`
       SELECT synced_at FROM vouchers WHERE tenant_id = ${params.tenantId} ORDER BY synced_at DESC LIMIT 1
     `;
 
-    const vouchers = await fortnox.getVouchers({
+    const modifiedVouchers = await fortnox.getVouchers({
       lastModified: row?.synced_at,
     });
 
-    const groupedVouchers = vouchers.data.reduce<Record<string, number>>(
-      (acc, voucher) => {
-        const series = voucher.VoucherSeries;
-        const number = voucher.VoucherNumber;
+    const groupedVouchers = modifiedVouchers.data.reduce((acc, voucher) => {
+      const series = voucher.VoucherSeries;
+      const number = voucher.VoucherNumber;
 
-        if (!acc[series]) {
-          acc[series] = number;
-        } else if (number < acc[series]) {
-          acc[series] = number;
-        }
+      if (!acc[series]) {
+        acc[series] = number;
+      } else if (number < acc[series]) {
+        acc[series] = number;
+      }
 
-        return acc;
-      },
-      {}
-    );
+      return acc;
+    }, {} as Record<string, number>);
 
     for (const series in groupedVouchers) {
       await clearVouchers(series, groupedVouchers[series], params.tenantId);
     }
 
-    log(groupedVouchers);
+    const fromDate = modifiedVouchers.data.reduce(
+      (earliest, current) => {
+        const cursor = dayjs(current.TransactionDate);
+
+        if (!earliest) {
+          return cursor;
+        }
+
+        return cursor < earliest ? cursor : earliest;
+      },
+      row?.synced_at ? dayjs(row.synced_at) : null
+    );
+
+    const vouchers = await fortnox.getVouchers({
+      from: fromDate?.add(-1, 'week').toISOString(),
+    });
 
     for (const voucher of vouchers.data) {
       await syncVoucher.publish({
-        partition: 'singleton',
+        partition: params.tenantId,
         tenantId: params.tenantId,
         jobId: params.jobId,
         voucher,
       });
+
+      await sleep(400); // To avoid hitting rate limits
     }
+
+    await iam.syncItemEnd({
+      jobId: params.jobId,
+      jobItemId: item.jobItemId,
+      status: 'success',
+    });
   },
 });
 

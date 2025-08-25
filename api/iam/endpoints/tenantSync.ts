@@ -1,7 +1,17 @@
 import { api } from 'encore.dev/api';
 import { syncTenant } from '../topics';
 import { db } from '../database';
-import { log } from 'console';
+import { Subscription, Topic } from 'encore.dev/pubsub';
+import { sleep } from '../../utils/sleep';
+
+interface JobStatus {
+  jobId: number;
+  updatedAt: Date | null;
+}
+
+export const topic = new Topic<JobStatus>('job-status', {
+  deliveryGuarantee: 'at-least-once',
+});
 
 interface SyncTenantRequest {
   id: number;
@@ -41,15 +51,15 @@ export const syncItemStart = api<SyncItemCreateRequest, SyncItemCreateResponse>(
     method: 'POST',
   },
   async ({ jobId, source, sourceId, sourceType }) => {
-    const jobItemId = await db.queryRow<{ id: number }>`
-      INSERT INTO sync_items (job_id, source, source_type, source_id, status, started_at)
-      VALUES (${jobId}, ${source}, ${sourceType}, ${sourceId}, 'pending', NOW())
-      ON CONFLICT (job_id, source, source_type, source_id) 
-      DO UPDATE SET started_at = NOW(), status = 'pending', error = NULL, finished_at = NULL
-      RETURNING id;
+    const jobItem = await db.queryRow<{ id: number }>`
+          INSERT INTO sync_items (job_id, source, source_type, source_id, status, started_at)
+          VALUES (${jobId}, ${source}, ${sourceType}, ${sourceId}, 'pending', NOW())
+          ON CONFLICT (job_id, source, source_type, source_id)
+          DO UPDATE SET started_at = NOW(), status = 'pending', error = NULL, finished_at = NULL
+          RETURNING id AS id, (xmax = 0) AS "isNew"
     `;
 
-    return { jobItemId: jobItemId!.id };
+    return { jobItemId: jobItem!.id };
   }
 );
 
@@ -73,43 +83,125 @@ export const syncItemEnd = api<SyncItemUpdateRequest>(
         UPDATE sync_items
         SET status = ${status},
             error = ${error ?? null},
-            finished_at = CASE WHEN ${status} IN ('success','failed') THEN NOW() ELSE NULL END
+            finished_at = NOW()
         WHERE id = ${jobItemId};
       `;
 
-      // 2️⃣ Recalculate job status
-      const result = await tx.queryRow<{ jobStatus: string }>`
-        WITH counts AS (
-          SELECT 
-            COUNT(*) FILTER (WHERE status = 'pending') AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'failed') AS failed_count,
-            COUNT(*) FILTER (WHERE status = 'success') AS success_count,
-            COUNT(*) AS total_count
-          FROM sync_items
-          WHERE job_id = ${jobId}
-        )
-        UPDATE sync_jobs j
-        SET status = CASE
-            WHEN c.pending_count > 0 THEN 'pending'
-            WHEN c.failed_count = 0 AND c.success_count = c.total_count THEN 'success'
-            ELSE 'partial'
-        END,
-        finished_at = CASE
-            WHEN c.pending_count = 0 THEN NOW()
-            ELSE NULL
-        END
-        FROM counts c
-        WHERE j.id = ${jobId}
-        RETURNING j.status AS jobStatus;
+      const result = await tx.queryRow<{ updated_at: Date }>`
+        UPDATE sync_jobs
+        SET updated_at = NOW()
+        WHERE id = ${jobId}
+        RETURNING updated_at;
       `;
 
       await tx.commit();
 
-      log(result);
+      if (result?.updated_at) {
+        await topic.publish({
+          updatedAt: result.updated_at,
+          jobId,
+        });
+      }
     } catch (error) {
-      log(error);
       await tx.rollback();
       throw error;
     }
   }
 );
+
+interface PendingSyncItem {
+  id: number;
+  job_id: number;
+  source: string;
+  source_type: string;
+  source_id: string;
+  status: string;
+  finished_at: string | null;
+  job_status: string;
+}
+
+interface PendingSyncRequest {
+  tenantId: number;
+}
+
+interface PendingSyncResponse {
+  items: PendingSyncItem[];
+}
+
+export const pendingSyncItems = api<PendingSyncRequest, PendingSyncResponse>(
+  {
+    path: '/tenants/:tenantId/sync/pending',
+    method: 'GET',
+  },
+  async ({ tenantId }) => {
+    const items = await db.query<PendingSyncItem>`
+      WITH latest_runs AS (
+          SELECT DISTINCT ON (i.source, i.source_type, i.source_id)
+              i.id,
+              i.job_id,
+              i.source,
+              i.source_type,
+              i.source_id,
+              i.status,
+              i.finished_at
+          FROM sync_items i
+          JOIN sync_jobs j ON j.id = i.job_id
+          WHERE j.tenant_id = ${tenantId}
+          ORDER BY i.source, i.source_type, i.source_id, i.started_at DESC
+      )
+      SELECT lr.*, j.status AS job_status
+      FROM latest_runs lr
+      JOIN sync_jobs j ON j.id = lr.job_id
+      WHERE lr.status != 'success'
+      ORDER BY lr.source, lr.source_type, lr.source_id;
+    `;
+
+    return { items } as any;
+  }
+);
+
+const _ = new Subscription(topic, 'process', {
+  handler: async (params) => {
+    await sleep(2000);
+
+    const job = await db.queryRow<{ updated_at: Date }>`
+      SELECT updated_at
+      FROM sync_jobs
+      WHERE id = ${params.jobId}
+    `;
+
+    if (job?.updated_at?.toISOString() !== params.updatedAt?.toISOString()) {
+      return;
+    }
+
+    await db.exec`
+    UPDATE sync_jobs j
+        SET
+          pending_count = counts.pending_count,
+          success_count = counts.success_count,
+          failed_count  = counts.failed_count,
+          total_count   = counts.total_count,
+          status = CASE
+            WHEN counts.pending_count > 0 THEN 'pending'
+            WHEN counts.failed_count = 0 AND counts.success_count = counts.total_count THEN 'success'
+            ELSE 'partial'
+          END,
+          finished_at = CASE
+            WHEN counts.pending_count = 0 THEN NOW()
+            ELSE NULL
+          END
+        FROM (
+          SELECT
+            job_id,
+            COUNT(*) FILTER (WHERE status = 'pending') AS pending_count,
+            COUNT(*) FILTER (WHERE status = 'success') AS success_count,
+            COUNT(*) FILTER (WHERE status = 'failed')  AS failed_count,
+            COUNT(*) AS total_count
+          FROM sync_items
+          WHERE job_id = ${params.jobId}
+          GROUP BY job_id
+        ) AS counts
+        WHERE j.id = counts.job_id;
+  `;
+  },
+});

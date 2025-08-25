@@ -4,6 +4,7 @@ import { db } from './database';
 import { iam, klarna } from '../encore.gen/clients';
 import { Payout } from './types';
 import dayjs from 'dayjs';
+import { sleep } from '../utils/sleep';
 
 interface SyncPayoutParams {
   partition: Attribute<string | number | 'singleton'>;
@@ -18,7 +19,7 @@ type SyncedAt = {
 
 export const syncPayout = new Topic<SyncPayoutParams>('sync-payout', {
   orderingAttribute: 'partition',
-  deliveryGuarantee: 'exactly-once',
+  deliveryGuarantee: 'at-least-once',
 });
 
 new Subscription(syncTenant, 'klarna-payout', {
@@ -38,6 +39,8 @@ new Subscription(syncTenant, 'klarna-payout', {
         jobId: params.jobId,
         payout,
       });
+
+      await sleep(300);
     }
   },
 });
@@ -84,7 +87,14 @@ new Subscription(syncPayout, 'process', {
           transactions: transactions.data,
         })}
       )
+      ON CONFLICT (payment_reference) DO NOTHING;
   `;
+
+      await iam.syncItemEnd({
+        jobId: params.jobId,
+        jobItemId: item.jobItemId,
+        status: 'success',
+      });
     } catch (error) {
       console.log(error);
 
