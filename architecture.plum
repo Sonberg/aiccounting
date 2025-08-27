@@ -1,0 +1,28 @@
+@startuml 
+
+package iam {
+    
+}
+
+package core {
+    
+}
+
+package klarna_fortnox {
+    
+}
+
+package fortnox {
+    
+}
+
+package klarna {
+
+}
+
+package sync {
+
+}
+
+
+@enduml

@@ -2,15 +2,15 @@ import { api } from 'encore.dev/api';
 import fs from 'fs';
 import path from 'path';
 import { toFile } from 'openai';
-import { client } from './open-ai';
+import { client } from '../open-ai';
 import PDFDocument from 'pdfkit';
 
-interface Params {
+interface UploadParams {
   fileName: string;
   content: string;
 }
 
-export const upload = api<Params>(
+export const upload = api<UploadParams>(
   { method: 'POST', path: '/core/upload' },
   async ({ fileName, content }) => {
     const filepath = path.join('/tmp', `${fileName}.pdf`);

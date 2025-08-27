@@ -1,5 +1,5 @@
 import { api } from 'encore.dev/api';
-import { client } from './open-ai';
+import { client } from '../open-ai';
 import { log } from 'console';
 import { extractJson } from '@/utils/extractJson';
 
@@ -17,18 +17,18 @@ export type TransactionSuggestionRow = {
   explanation: string | null;
 };
 
-interface Params {
+export interface SuggestParams {
   tenantId: number;
   fileNames: string[];
   transactionSource: string;
   transaction: unknown;
 }
 
-interface Response {
+export interface SuggestResponse {
   data: TransactionSuggestion;
 }
 
-export const suggest = api<Params, Response>(
+export const suggest = api<SuggestParams, SuggestResponse>(
   { method: 'POST', path: '/core/suggest' },
   async (params) => {
     const prompt = `
@@ -44,12 +44,12 @@ export const suggest = api<Params, Response>(
       - Never include empty rows.
       - Only use active accounts.
       - Prefer accounts used in the most recent vouchers for ${
-            params.transactionSource
-          }.
+        params.transactionSource
+      }.
       - Follow Swedish bookkeeping best practices (BAS-kontoplan).
       - Use the attached vouchers as references, but only from ${
-            params.transactionSource
-          }.
+        params.transactionSource
+      }.
 
       Return only valid JSON in this schema:
       {

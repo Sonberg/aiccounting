@@ -1,10 +1,10 @@
-import { syncTenant } from '@/iam/topics';
 import { Attribute, Subscription, Topic } from 'encore.dev/pubsub';
 import { db } from './database';
-import { iam, klarna } from '../encore.gen/clients';
+import { klarna, sync } from '../encore.gen/clients';
 import { Payout } from './types';
 import dayjs from 'dayjs';
 import { sleep } from '../utils/sleep';
+import { syncStarted } from '../sync/topics';
 
 interface SyncPayoutParams {
   partition: Attribute<string | number | 'singleton'>;
@@ -22,7 +22,7 @@ export const syncPayout = new Topic<SyncPayoutParams>('sync-payout', {
   deliveryGuarantee: 'at-least-once',
 });
 
-new Subscription(syncTenant, 'klarna-payout', {
+new Subscription(syncStarted, 'klarna-payout', {
   handler: async (params) => {
     const row = await db.queryRow<SyncedAt>`
           SELECT synced_at FROM payouts WHERE tenant_id = ${params.tenantId} ORDER BY synced_at DESC LIMIT 1
@@ -47,7 +47,7 @@ new Subscription(syncTenant, 'klarna-payout', {
 
 new Subscription(syncPayout, 'process', {
   handler: async (params) => {
-    const item = await iam.syncItemStart({
+    const item = await sync.startSyncItem({
       jobId: params.jobId,
       source: 'klarna',
       sourceType: 'payout',
@@ -90,7 +90,7 @@ new Subscription(syncPayout, 'process', {
       ON CONFLICT (payment_reference) DO NOTHING;
   `;
 
-      await iam.syncItemEnd({
+      await sync.stopSyncItem({
         jobId: params.jobId,
         jobItemId: item.jobItemId,
         status: 'success',
@@ -98,7 +98,7 @@ new Subscription(syncPayout, 'process', {
     } catch (error) {
       console.log(error);
 
-      await iam.syncItemEnd({
+      await sync.stopSyncItem({
         jobId: params.jobId,
         jobItemId: item.jobItemId,
         status: 'failed',

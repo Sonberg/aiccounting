@@ -1,14 +1,14 @@
 import { api } from 'encore.dev/api';
-import { client } from './open-ai';
-import { extractJson } from '../utils/extractJson';
+import { client } from '../open-ai';
+import { extractJson } from '../../utils/extractJson';
 
-interface CoreStatusParams {
+interface MatchParams {
   fileNames: string[];
   transactionSource: string;
   transactions: unknown;
 }
 
-interface CoreStatusResponse {
+interface MatchResponse {
   data: TransactionStatus[];
 }
 
@@ -21,8 +21,8 @@ export interface TransactionStatus {
   state: string;
 }
 
-export const status = api<CoreStatusParams, CoreStatusResponse>(
-  { method: 'POST', path: '/core/status' },
+export const match = api<MatchParams, MatchResponse>(
+  { method: 'POST', path: '/core/match' },
   async (params) => {
     const prompt = `
     Bookkeeping entries from Fortnox are included as files.

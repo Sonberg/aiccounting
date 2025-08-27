@@ -3,6 +3,7 @@ import { api } from 'encore.dev/api';
 import { getToken } from '../database';
 import { getFortnoxClient } from '../client';
 import { FortnoxVoucher } from '../types';
+import { log } from 'console';
 
 interface FortnoxResponse {
   MetaInformation: {
@@ -40,19 +41,27 @@ export const getVouchers = api<GetVouchersRequest, GetVouchersResponse>(
     let totalPages = 1;
 
     do {
-      const { data } = await fortnox.get<FortnoxResponse>(`/3/vouchers`, {
-        params: {
-          fromdate: from ? dayjs(from).format('YYYY-MM-DD') : undefined,
-          todate: to ? dayjs(to).format('YYYY-MM-DD') : undefined,
-          lastmodified: lastModified
-            ? dayjs(lastModified).format('YYYY-MM-DD HH:mm')
-            : undefined,
-          voucherseries: voucherSeries,
-          page: currentPage,
-          sortby: 'vouchernumber',
-          sortorder: 'descending',
-        },
-      });
+      const { data, ...rest } = await fortnox.get<FortnoxResponse>(
+        `/3/vouchers`,
+        {
+          params: {
+            fromdate: from ? dayjs(from).format('YYYY-MM-DD') : undefined,
+            todate: to ? dayjs(to).format('YYYY-MM-DD') : undefined,
+            lastmodified: lastModified
+              ? dayjs(lastModified).format('YYYY-MM-DD HH:mm')
+              : undefined,
+            voucherseries: voucherSeries,
+            page: currentPage,
+            sortby: 'vouchernumber',
+            sortorder: 'descending',
+          },
+          validateStatus: () => true,
+        }
+      );
+
+      if (rest.status !== 200) {
+        log(data, rest.request);
+      }
 
       for (const voucher of data.Vouchers) {
         vouchers.push(voucher);

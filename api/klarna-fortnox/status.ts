@@ -1,8 +1,8 @@
-import { TransactionStatus } from '@/core/status';
 import { fileByConvention } from '@/utils/filesByConvention';
 import dayjs from 'dayjs';
 import { api } from 'encore.dev/api';
-import { core, fortnox, klarna } from '~encore/clients';
+import { core, klarna } from '~encore/clients';
+import { TransactionStatus } from '../core/endpoints/match';
 
 interface KlarnaFortnoxStatusParams {
   from: string;
@@ -26,7 +26,7 @@ export const status = api<
       from,
     });
 
-    const status = await core.status({
+    const status = await core.match({
       fileNames: fileByConvention.fromMonthRange(
         1,
         'fortnox',

@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { TransactionSuggestion } from '@/core/suggest';
+import { TransactionSuggestion } from '@/core/endpoints/suggest';
 import { fileByConvention } from '@/utils/filesByConvention';
 import { api } from 'encore.dev/api';
 import { core, klarna } from '~encore/clients';
