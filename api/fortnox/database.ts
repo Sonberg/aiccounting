@@ -1,12 +1,7 @@
 import dayjs, { Dayjs } from 'dayjs';
-import { SQLDatabase } from 'encore.dev/storage/sqldb';
 import { isTokenValid } from './utlls';
 import { refreshToken } from './client';
-import exp from 'constants';
-
-export const db = new SQLDatabase('fortnox', {
-  migrations: './migrations',
-});
+import { db } from '@/database';
 
 export interface SetTokenArgs {
   tenantId: number;
@@ -32,7 +27,7 @@ interface TokenRow {
 
 export async function setToken(args: SetTokenArgs) {
   await db.rawExec(
-    `INSERT INTO tokens (tenant_id, access_token, refresh_token, created_at) VALUES ($1, $2, $3, $4)`,
+    `INSERT INTO fortnox_tokens (tenant_id, access_token, refresh_token, created_at) VALUES ($1, $2, $3, $4)`,
     args.tenantId,
     args.accessToken,
     args.refreshToken,
@@ -42,7 +37,7 @@ export async function setToken(args: SetTokenArgs) {
 
 export async function getToken(tenantId: number): Promise<Token> {
   const row = await db.queryRow<TokenRow>`
-      SELECT * FROM tokens where tenant_id = ${tenantId}
+      SELECT * FROM fortnox_tokens where tenant_id = ${tenantId}
       ORDER BY id DESC
       LIMIT 1
       `;
@@ -79,17 +74,4 @@ export async function getToken(tenantId: number): Promise<Token> {
     createdAt: dayjs(),
     isValid: true,
   };
-}
-
-export async function clearVouchers(
-  series: string,
-  fromNumber: number,
-  tenantId: number
-) {
-  return await db.rawExec(
-    `DELETE FROM vouchers WHERE voucher_series = $1 AND tenant_id = $2 AND voucher_number >= $3`,
-    series,
-    tenantId,
-    fromNumber
-  );
 }

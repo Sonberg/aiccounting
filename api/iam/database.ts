@@ -1,10 +1,10 @@
-import { SQLDatabase } from 'encore.dev/storage/sqldb';
 import { User } from './types';
 import { hashRefreshToken } from './helpers/tokens';
+import { db } from '@/database';
 
-export const db = new SQLDatabase('iam', {
-  migrations: './migrations',
-});
+// export const db = new SQLDatabase('iam', {
+//   migrations: './migrations',
+// });
 
 interface SetRefreshTokenArgs {
   user: User;

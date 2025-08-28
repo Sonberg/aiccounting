@@ -1,7 +1,8 @@
 import { pbkdf2Sync, randomBytes } from 'crypto';
 import { api } from 'encore.dev/api';
 
-import { db, setRefreshToken } from '../database';
+import { setRefreshToken } from '../database';
+import { db } from '@/database';
 import { User } from '../types';
 import { createAccessToken, createRefreshToken } from '../helpers/tokens';
 import dayjs from 'dayjs';

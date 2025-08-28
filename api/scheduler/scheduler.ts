@@ -1,11 +1,14 @@
 import { CronJob } from 'encore.dev/cron';
 import { api } from 'encore.dev/api';
-import { sync } from '../encore.gen/clients';
+import { iam, sync } from '../encore.gen/clients';
 
 export const syncAllTenants = api(
   { method: 'POST', path: '/scheduler/sync-tenants' },
   async () => {
-    await sync.startSync({ tenantId: 1 });
+    const tenants = await iam.getTenants({});
+    for (const tenant of tenants.data) {
+      await sync.startSync({ tenantId: tenant.id });
+    }
   }
 );
 

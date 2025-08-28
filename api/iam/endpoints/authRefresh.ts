@@ -1,5 +1,6 @@
 import { api } from 'encore.dev/api';
-import { db, getUserById, setRefreshToken } from '../database';
+import { getUserById, setRefreshToken } from '../database';
+import { db } from '@/database';
 import {
   createAccessToken,
   createRefreshToken,

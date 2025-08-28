@@ -3,7 +3,7 @@ import { authHandler } from 'encore.dev/auth';
 import { User } from './types';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from './secrets';
-import { db } from './database';
+import { db } from '@/database';
 import { log } from 'node:console';
 
 interface AuthRequest {

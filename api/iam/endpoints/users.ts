@@ -1,6 +1,6 @@
 import { api } from 'encore.dev/api';
 import { getAuthData } from '~encore/auth';
-import { db } from '../database';
+import { db } from '@/database';
 
 interface User {
   id: string;

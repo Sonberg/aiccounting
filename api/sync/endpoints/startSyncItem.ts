@@ -1,5 +1,5 @@
 import { api } from 'encore.dev/api';
-import { db } from '../database';
+import { db } from '@/database';
 
 interface SyncItemCreateRequest {
   jobId: number;
@@ -19,7 +19,7 @@ export const startSyncItem = api<SyncItemCreateRequest, SyncItemCreateResponse>(
   },
   async ({ jobId, source, sourceId, sourceType }) => {
     const jobItem = await db.queryRow<{ id: number }>`
-          INSERT INTO sync_items (job_id, source, source_type, source_id, status, started_at)
+          INSERT INTO sync_job_items (job_id, source, source_type, source_id, status, started_at)
           VALUES (${jobId}, ${source}, ${sourceType}, ${sourceId}, 'pending', NOW())
           ON CONFLICT (job_id, source, source_type, source_id)
           DO UPDATE SET started_at = NOW(), status = 'pending', error = NULL, finished_at = NULL

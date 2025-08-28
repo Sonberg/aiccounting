@@ -1,5 +1,5 @@
 import { api } from 'encore.dev/api';
-import { db } from '../database';
+import { db } from '@/database';
 import { syncUpdated } from '../topics';
 
 interface SyncItemUpdateRequest {
@@ -19,7 +19,7 @@ export const stopSyncItem = api<SyncItemUpdateRequest>(
 
     try {
       await tx.exec`
-        UPDATE sync_items
+        UPDATE sync_job_items
         SET status = ${status},
             error = ${error ?? null},
             finished_at = NOW()

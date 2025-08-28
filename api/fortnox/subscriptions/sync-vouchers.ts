@@ -1,10 +1,10 @@
 import { syncStarted } from '@/sync/topics';
 import { Subscription } from 'encore.dev/pubsub';
 import { fortnox, sync } from '../../encore.gen/clients';
-import { clearVouchers, db } from '../database';
 import { syncVoucher } from '../topics';
 import { sleep } from '../../utils/sleep';
 import dayjs from 'dayjs';
+import { db } from '@/database';
 
 type SyncedAt = {
   synced_at: string;
@@ -20,7 +20,7 @@ new Subscription(syncStarted, 'sync-vouchers', {
     });
 
     const row = await db.queryRow<SyncedAt>`
-      SELECT synced_at FROM vouchers WHERE tenant_id = ${params.tenantId} ORDER BY synced_at DESC LIMIT 1
+      SELECT synced_at FROM fortnox_vouchers WHERE tenant_id = ${params.tenantId} ORDER BY synced_at DESC LIMIT 1
     `;
 
     const modifiedVouchers = await fortnox.getVouchers({
@@ -80,3 +80,16 @@ new Subscription(syncStarted, 'sync-vouchers', {
     });
   },
 });
+
+async function clearVouchers(
+  series: string,
+  fromNumber: number,
+  tenantId: number
+) {
+  return await db.rawExec(
+    `DELETE FROM fortnox_vouchers WHERE voucher_series = $1 AND tenant_id = $2 AND voucher_number >= $3`,
+    series,
+    tenantId,
+    fromNumber
+  );
+}

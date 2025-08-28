@@ -12,3 +12,6 @@ CREATE TABLE
         synced_at TIMESTAMPTZ DEFAULT now (),
         UNIQUE (voucher_series, voucher_number)
     );
+
+/ / Add vector embedding
+and ai summery

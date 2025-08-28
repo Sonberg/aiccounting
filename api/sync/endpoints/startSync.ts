@@ -1,6 +1,6 @@
 import { api } from 'encore.dev/api';
 import { syncStarted } from '../topics';
-import { db } from '../database';
+import { db } from '@/database';
 
 interface StartSyncRequest {
   tenantId: number;

@@ -1,9 +1,9 @@
 import { Subscription } from 'encore.dev/pubsub';
 import { syncCompleted, syncUpdated } from '../topics';
 import { sleep } from '../../utils/sleep';
-import { db } from '../database';
+import { db } from '@/database';
 
-new Subscription(syncUpdated, 'check-status', {
+new Subscription(syncUpdated, 'process', {
   handler: async (params) => {
     await sleep(2000);
 
@@ -40,7 +40,7 @@ new Subscription(syncUpdated, 'check-status', {
             COUNT(*) FILTER (WHERE status = 'success') AS success_count,
             COUNT(*) FILTER (WHERE status = 'failed')  AS failed_count,
             COUNT(*) AS total_count
-          FROM sync_items
+          FROM sync_job_items
           WHERE job_id = ${params.jobId}
           GROUP BY job_id
         ) AS counts

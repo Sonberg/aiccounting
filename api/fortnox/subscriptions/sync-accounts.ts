@@ -3,7 +3,7 @@ import { Subscription } from 'encore.dev/pubsub';
 import { sync } from '../../encore.gen/clients';
 import { syncStarted } from '../../sync/topics';
 
-new Subscription(syncStarted, 'sync-accounts', {
+new Subscription(syncStarted, 'process', {
   handler: async (params) => {
     const item = await sync.startSyncItem({
       jobId: params.jobId,

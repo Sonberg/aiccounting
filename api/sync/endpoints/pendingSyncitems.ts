@@ -1,5 +1,5 @@
 import { api } from 'encore.dev/api';
-import { db } from '../database';
+import { db } from '@/database';
 
 interface PendingSyncItem {
   id: number;
@@ -36,7 +36,7 @@ export const pendingSyncItems = api<PendingSyncRequest, PendingSyncResponse>(
               i.source_id,
               i.status,
               i.finished_at
-          FROM sync_items i
+          FROM sync_job_items i
           JOIN sync_jobs j ON j.id = i.job_id
           WHERE j.tenant_id = ${tenantId}
           ORDER BY i.source, i.source_type, i.source_id, i.started_at DESC

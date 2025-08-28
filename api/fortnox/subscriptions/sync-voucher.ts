@@ -2,10 +2,11 @@ import { Subscription } from 'encore.dev/pubsub';
 import { syncVoucher } from '../topics';
 import { sync } from '../../encore.gen/clients';
 import { getFortnoxClient } from '../client';
-import { getToken, db } from '../database';
+import { getToken } from '../database';
 import { FortnoxVoucher } from '../types';
+import { db } from '@/database';
 
-new Subscription(syncVoucher, 'sync-voucher', {
+new Subscription(syncVoucher, 'process', {
   handler: async ({ tenantId, voucher, jobId }) => {
     const item = await sync.startSyncItem({
       jobId: jobId,
@@ -24,7 +25,7 @@ new Subscription(syncVoucher, 'sync-voucher', {
 
     try {
       await tx.queryRow<{ id: number }>`
-          INSERT INTO vouchers (
+          INSERT INTO fortnox_vouchers (
             tenant_id,
             approval_state,
             year,
@@ -43,7 +44,7 @@ new Subscription(syncVoucher, 'sync-voucher', {
             ${data.Voucher.Description},
             ${JSON.stringify(data.Voucher)}::jsonb
           )
-          ON CONFLICT (voucher_series, voucher_number) DO UPDATE
+          ON CONFLICT (tenant_id, voucher_series, voucher_number) DO UPDATE
             SET
               approval_state = EXCLUDED.approval_state,
               transaction_date = EXCLUDED.transaction_date,

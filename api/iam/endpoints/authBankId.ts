@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { collectBankIdStatus, startBankIdAuth } from '../helpers/bankid';
-import { db } from '../database';
+import { db } from '@/database';
 import { api } from 'encore.dev/api';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';

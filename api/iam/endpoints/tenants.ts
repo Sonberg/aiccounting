@@ -1,12 +1,12 @@
 import { api } from 'encore.dev/api';
-import { db } from '../database';
+import { db } from '@/database';
 
 interface CreateTenantRequest {
   name: string;
 }
 
 interface Tenant {
-  id: string;
+  id: number;
   name: string;
   created_at: string;
 }
@@ -24,6 +24,30 @@ export const createTenant = api<CreateTenantRequest, Tenant>(
     RETURNING id, name, created_at
   `;
     return result!;
+  }
+);
+
+export interface GetTenantsRequest {}
+export interface GetTenantsResponse {
+  data: Tenant[];
+}
+
+export const getTenants = api<GetTenantsRequest, GetTenantsResponse>(
+  {
+    path: '/tenants',
+    method: 'GET',
+    auth: false,
+  },
+  async () => {
+    return {
+      data: [
+        {
+          id: 1,
+          name: 'Glufs',
+          created_at: '',
+        },
+      ],
+    };
   }
 );
 

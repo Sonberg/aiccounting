@@ -1,5 +1,5 @@
 import { Attribute, Subscription, Topic } from 'encore.dev/pubsub';
-import { db } from './database';
+import { db } from '@/database';
 import { klarna, sync } from '../encore.gen/clients';
 import { Payout } from './types';
 import dayjs from 'dayjs';
@@ -25,7 +25,7 @@ export const syncPayout = new Topic<SyncPayoutParams>('sync-payout', {
 new Subscription(syncStarted, 'klarna-payout', {
   handler: async (params) => {
     const row = await db.queryRow<SyncedAt>`
-          SELECT synced_at FROM payouts WHERE tenant_id = ${params.tenantId} ORDER BY synced_at DESC LIMIT 1
+          SELECT synced_at FROM klarna_payouts WHERE tenant_id = ${params.tenantId} ORDER BY synced_at DESC LIMIT 1
         `;
 
     const payouts = await klarna.getPayouts({
@@ -60,7 +60,7 @@ new Subscription(syncPayout, 'process', {
       });
 
       await db.exec`
-      INSERT INTO payouts (
+      INSERT INTO klarna_payouts (
         payment_reference,
         payout_date,
         currency,
