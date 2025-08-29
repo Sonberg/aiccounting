@@ -5,6 +5,7 @@ import { getFortnoxClient } from '../client';
 import { getToken } from '../database';
 import { FortnoxVoucher } from '../types';
 import { db } from '@/database';
+import { createEmbedding } from '../../core/topics';
 
 new Subscription(syncVoucher, 'process', {
   handler: async ({ tenantId, voucher, jobId }) => {
@@ -24,7 +25,8 @@ new Subscription(syncVoucher, 'process', {
     const tx = await db.begin();
 
     try {
-      await tx.queryRow<{ id: number }>`
+      const content = JSON.stringify(data.Voucher);
+      const row = await tx.queryRow<{ id: number }>`
           INSERT INTO fortnox_vouchers (
             tenant_id,
             approval_state,
@@ -42,7 +44,7 @@ new Subscription(syncVoucher, 'process', {
             ${data.Voucher.VoucherSeries},
             ${data.Voucher.TransactionDate},
             ${data.Voucher.Description},
-            ${JSON.stringify(data.Voucher)}::jsonb
+            ${content}::jsonb
           )
           ON CONFLICT (tenant_id, voucher_series, voucher_number) DO UPDATE
             SET
@@ -52,6 +54,28 @@ new Subscription(syncVoucher, 'process', {
               raw_json = EXCLUDED.raw_json
           RETURNING id;
         `;
+
+      await createEmbedding.publish({
+        tableName: 'fortnox_vouchers',
+        tenantId: tenantId,
+        rowId: row!.id,
+        content,
+        summary: [
+          'Fortnox voucher',
+          `Year: ${data.Voucher.Year}`,
+          `VoucherSeries: ${data.Voucher.VoucherSeries}`,
+          `VoucherNumber: ${data.Voucher.VoucherNumber}`,
+          `TransactionDate: ${data.Voucher.TransactionDate}`,
+        ]
+          .filter((x) => x)
+          .join(' | '),
+        metadata: {
+          year: data.Voucher.Year,
+          VoucherSeries: data.Voucher.VoucherSeries,
+          VoucherNumber: data.Voucher.VoucherNumber,
+          TransactionDate: data.Voucher.TransactionDate,
+        },
+      });
 
       await tx.commit();
       await sync.stopSyncItem({
