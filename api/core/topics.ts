@@ -4,8 +4,7 @@ export interface CreateEmbeddingParams {
   tenantId: number;
   tableName: 'fortnox_vouchers' | 'fortnox_accounts' | 'klarna_payouts';
   rowId: number;
-  content: string;
-  summary: string | null;
+  summary: string;
   metadata: Record<string, string | number>;
 }
 

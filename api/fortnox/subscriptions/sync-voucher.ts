@@ -6,6 +6,9 @@ import { getToken } from '../database';
 import { FortnoxVoucher } from '../types';
 import { db } from '@/database';
 import { createEmbedding } from '../../core/topics';
+import dayjs from 'dayjs';
+
+type Id = { id: number };
 
 new Subscription(syncVoucher, 'process', {
   handler: async ({ tenantId, voucher, jobId }) => {
@@ -26,7 +29,7 @@ new Subscription(syncVoucher, 'process', {
 
     try {
       const content = JSON.stringify(data.Voucher);
-      const row = await tx.queryRow<{ id: number }>`
+      const row = await tx.queryRow<Id>`
           INSERT INTO fortnox_vouchers (
             tenant_id,
             approval_state,
@@ -59,16 +62,7 @@ new Subscription(syncVoucher, 'process', {
         tableName: 'fortnox_vouchers',
         tenantId: tenantId,
         rowId: row!.id,
-        content,
-        summary: [
-          'Fortnox voucher',
-          `Year: ${data.Voucher.Year}`,
-          `VoucherSeries: ${data.Voucher.VoucherSeries}`,
-          `VoucherNumber: ${data.Voucher.VoucherNumber}`,
-          `TransactionDate: ${data.Voucher.TransactionDate}`,
-        ]
-          .filter((x) => x)
-          .join(' | '),
+        summary: fortnoxEmbeddingString(data.Voucher),
         metadata: {
           year: data.Voucher.Year,
           VoucherSeries: data.Voucher.VoucherSeries,
@@ -96,3 +90,28 @@ new Subscription(syncVoucher, 'process', {
     }
   },
 });
+
+const fortnoxEmbeddingString = (voucher: FortnoxVoucher) =>
+  `
+Fortnox voucher ${voucher.VoucherSeries}${voucher.VoucherNumber} (${
+    voucher.Year
+  }):
+Approval state: ${voucher.ApprovalState}, Reference: ${
+    voucher.ReferenceNumber ?? 'N/A'
+  }, Reference type: ${voucher.ReferenceType ?? 'N/A'},
+Comments: ${voucher.Comments ?? 'N/A'}, Description: ${
+    voucher.Description ?? 'N/A'
+  }, Transaction date: ${dayjs(voucher.TransactionDate).format('YYYY-MM-DD')},
+Voucher rows: ${voucher.VoucherRows?.map(
+    (row) => `
+- Account: ${row.Account}, Cost center: ${row.CostCenter ?? 'N/A'}, Debit: ${
+      row.Debit
+    }, Credit: ${row.Credit}, 
+  Description: ${row.Description ?? 'N/A'}, Project: ${
+      row.Project ?? 'N/A'
+    }, Quantity: ${row.Quantity}, Removed: ${row.Removed}, Transaction info: ${
+      row.TransactionInformation ?? 'N/A'
+    }
+`
+  ).join(' ')}
+`.trim();

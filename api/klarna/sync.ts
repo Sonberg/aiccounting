@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 
 import { db } from '@/database';
 import { klarna, sync } from '~encore/clients';
-import { Payout } from './types';
+import { Payout, PayoutTransaction } from './types';
 import { sleep } from '../utils/sleep';
 import { syncStarted } from '../sync/topics';
 import { createEmbedding } from '../core/topics';
@@ -111,24 +111,7 @@ new Subscription(syncPayout, 'process', {
         tableName: 'klarna_payouts',
         tenantId: params.tenantId,
         rowId: row!.id,
-        content,
-        summary: [
-          'Klarna paypout',
-          params.payout.payment_reference,
-          [
-            ...new Set(
-              transactions.data.map((x) => x.purchase_country).filter((x) => x)
-            ),
-          ].join(', '),
-          `Payout date: ${payout.payout_date}`,
-          `Settlment: ${payout.totals.settlement_amount / 100} ${currency}`,
-          `Sales: ${payout.totals.sale_amount / 100} ${currency}`,
-          `Tax: ${payout.totals.tax_amount / 100} ${currency}`,
-          `Fee: ${payout.totals.fee_amount / 100} ${currency}`,
-          `Returns: ${payout.totals.return_amount / 100} ${currency}`,
-        ]
-          .filter((x) => x)
-          .join(' | '),
+        summary: klarnaEmbeddingString(params.payout, transactions.data),
         metadata: {
           paymentReference: payout.payment_reference,
           currencyCode: payout.currency_code,
@@ -148,3 +131,40 @@ new Subscription(syncPayout, 'process', {
     }
   },
 });
+
+const klarnaEmbeddingString = (
+  payout: Payout,
+  transactions: PayoutTransaction[]
+) =>
+  `
+Klarna payout ${payout.payment_reference} for merchant ${payout.merchant_id} (${
+    payout.merchant_settlement_type
+  }) on ${dayjs(payout.payout_date).format('YYYY-MM-DD')}:
+Currency: ${payout.currency_code}${
+    payout.currency_code_of_registration_country
+      ? ` (registration country: ${payout.currency_code_of_registration_country})`
+      : ''
+  },
+Totals: Sale ${payout.totals.sale_amount}, Settlement ${
+    payout.totals.settlement_amount
+  }, Fee ${payout.totals.fee_amount}, Tax ${
+    payout.totals.tax_amount
+  }, Returns ${payout.totals.return_amount},
+Transactions: ${transactions
+    .map(
+      (tx) => `
+- Type: ${tx.type}, Detailed type: ${tx.detailed_type}, Amount: ${tx.amount} ${
+        tx.currency_code
+      }, 
+  Sale date: ${
+    tx.sale_date ? dayjs(tx.sale_date).format('YYYY-MM-DD') : 'N/A'
+  }, Capture date: ${
+        tx.capture_date ? dayjs(tx.capture_date).format('YYYY-MM-DD') : 'N/A'
+      }, 
+  Country: ${tx.purchase_country ?? 'N/A'}, Order ID: ${
+        tx.order_id ?? 'N/A'
+      }, Short order ID: ${tx.short_order_id ?? 'N/A'}
+`
+    )
+    .join(' ')}
+`.trim();

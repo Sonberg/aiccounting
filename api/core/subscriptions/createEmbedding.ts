@@ -12,7 +12,7 @@ new Subscription(createEmbedding, 'process', {
   handler: async (params) => {
     const embeddingResponse = await client.embeddings.create({
       model: 'text-embedding-3-small',
-      input: params.content,
+      input: params.summary,
     });
 
     const embeddingVector = embeddingResponse.data[0].embedding;
