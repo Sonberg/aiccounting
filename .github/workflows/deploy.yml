@@ -15,17 +15,12 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm install
         working-directory: ./api
 
       - name: Build application
-        run: pnpm build
+        run: npm run build
         working-directory: ./api
 
       - name: Deploy to Fly.io
