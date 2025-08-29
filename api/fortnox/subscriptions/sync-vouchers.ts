@@ -1,6 +1,6 @@
 import { syncStarted } from '@/sync/topics';
 import { Subscription } from 'encore.dev/pubsub';
-import { fortnox, sync } from '@/encore.gen/clients';
+import { fortnox, sync } from '~encore/clients';
 import { syncVoucher } from '../topics';
 import { sleep } from '../../utils/sleep';
 import { db } from '@/database';

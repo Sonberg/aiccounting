@@ -2,7 +2,7 @@ import { Attribute, Subscription, Topic } from 'encore.dev/pubsub';
 import dayjs from 'dayjs';
 
 import { db } from '@/database';
-import { klarna, sync } from '../encore.gen/clients';
+import { klarna, sync } from '~encore/clients';
 import { Payout } from './types';
 import { sleep } from '../utils/sleep';
 import { syncStarted } from '../sync/topics';
