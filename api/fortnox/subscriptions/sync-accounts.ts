@@ -1,6 +1,6 @@
 import { log } from 'console';
 import { Subscription } from 'encore.dev/pubsub';
-import { sync } from '../../encore.gen/clients';
+import { sync } from '@/encore.gen/clients';
 import { syncStarted } from '../../sync/topics';
 
 new Subscription(syncStarted, 'process', {

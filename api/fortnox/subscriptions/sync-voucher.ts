@@ -1,6 +1,6 @@
 import { Subscription } from 'encore.dev/pubsub';
 import { syncVoucher } from '../topics';
-import { sync } from '../../encore.gen/clients';
+import { sync } from '@/encore.gen/clients';
 import { getFortnoxClient } from '../client';
 import { getToken } from '../database';
 import { FortnoxVoucher } from '../types';
