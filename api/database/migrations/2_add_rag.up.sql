@@ -6,7 +6,7 @@ CREATE TABLE
         tenant_id BIGINT NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
         table_name TEXT NOT NULL, -- e.g. 'fortnox_vouchers', 'klarna_payouts'
         row_id BIGINT NOT NULL, -- PK value in that table
-        embedding float8[] NOT NULL,
+        embedding vector (1536) NOT NULL, -- real pgvector type
         summary TEXT,
         metadata JSONB,
         created_at TIMESTAMPTZ DEFAULT now (),
@@ -16,3 +16,8 @@ CREATE TABLE
 CREATE INDEX rag_embeddings_table_idx ON rag_embeddings (table_name, row_id);
 
 CREATE INDEX rag_embeddings_tenant_idx ON rag_embeddings (tenant_id);
+
+-- optional: index for fast vector search
+CREATE INDEX rag_embeddings_embedding_idx ON rag_embeddings USING ivfflat (embedding vector_cosine_ops)
+WITH
+    (lists = 100);

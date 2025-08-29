@@ -12,8 +12,8 @@ export const syncAllTenants = api(
   }
 );
 
-export const scheduleSync = new CronJob('sync-scheduler', {
-  title: 'Schedule sync',
-  every: '2h',
-  endpoint: syncAllTenants,
-});
+// export const scheduleSync = new CronJob('sync-scheduler', {
+//   title: 'Schedule sync',
+//   every: '2h',
+//   endpoint: syncAllTenants,
+// });

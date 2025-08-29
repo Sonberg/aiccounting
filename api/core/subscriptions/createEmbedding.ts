@@ -4,6 +4,10 @@ import { log } from 'console';
 import { client } from '../open-ai';
 import { db } from '../../database';
 
+function toPgVector(values: number[]): string {
+  return `'[${values.join(',')}]'`;
+}
+
 new Subscription(createEmbedding, 'process', {
   handler: async (params) => {
     const embeddingResponse = await client.embeddings.create({
@@ -12,7 +16,9 @@ new Subscription(createEmbedding, 'process', {
     });
 
     const embeddingVector = embeddingResponse.data[0].embedding;
-    const row = await db.queryRow<{ id: number }>`
+    const embedding = toPgVector(embeddingVector);
+    const row = await db.rawExec(
+      `
       INSERT INTO rag_embeddings (
         tenant_id,
         table_name,
@@ -21,19 +27,25 @@ new Subscription(createEmbedding, 'process', {
         summary,
         metadata
       ) VALUES (
-        ${params.tenantId},
-        ${params.tableName},
-        ${params.rowId},
-        ${embeddingVector},
-        ${params.summary},
-        ${params.metadata}
+        $1,
+        $2,
+        $3,
+        ${embedding},
+        $4,
+        $5
       )
       ON CONFLICT (table_name, row_id) DO UPDATE
         SET embedding = EXCLUDED.embedding,
             summary = EXCLUDED.summary,
             metadata = EXCLUDED.metadata
       RETURNING id;
-    `;
+    `,
+      params.tenantId,
+      params.tableName,
+      params.rowId,
+      params.summary,
+      params.metadata
+    );
     log('Embedding created');
   },
 });

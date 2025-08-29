@@ -59,21 +59,6 @@ CREATE INDEX idx_refresh_tokens_token_hash ON auth_refresh_tokens (token_hash);
 
 CREATE INDEX idx_refresh_tokens_expires_at ON auth_refresh_tokens (expires_at);
 
-/*
-- tenants 
-- users
-- user_tenants
-- user_auth_bankid
-- user_auth_password
-- klarna_payouts
-- fortnox_vouchers
-- fortnox_account
-- fortnox_tokens
-- klarna_fortnox_matches
-- klarna_fortnox_suggestions 
-- sync_jobs
-- sync_job_items
- */
 /* FORTNOX */
 CREATE TABLE
     fortnox_tokens (

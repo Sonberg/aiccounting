@@ -4,6 +4,7 @@ import { getToken } from '../database';
 import { getFortnoxClient } from '../client';
 import { FortnoxVoucher } from '../types';
 import { log } from 'console';
+import { sleep } from '../../utils/sleep';
 
 interface FortnoxResponse {
   MetaInformation: {
@@ -59,9 +60,9 @@ export const getVouchers = api<GetVouchersRequest, GetVouchersResponse>(
         }
       );
 
-      if (rest.status !== 200) {
-        log(data, rest.request);
-      }
+      await sleep(400);
+
+      log(data, rest.request);
 
       for (const voucher of data.Vouchers) {
         vouchers.push(voucher);

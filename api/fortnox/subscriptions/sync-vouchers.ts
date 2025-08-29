@@ -15,6 +15,7 @@ type SyncedAt = {
 };
 
 new Subscription(syncStarted, 'sync-vouchers', {
+  ackDeadline: '1h',
   handler: async (params) => {
     const item = await sync.startSyncItem({
       jobId: params.jobId,
